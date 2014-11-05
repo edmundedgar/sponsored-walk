@@ -223,4 +223,33 @@ This will be empty unless you hit "view" or have the details in a URL.
 We use visibility hidden here instead of display none to avoid confusing the browser trying to link to an anchor that isn't being displayed, which can cause strange visual effects.
 */
 .goal-view-section { visibility: hidden }
-#mnemonic {text-align: center}
+#mnemonic, #mnemonic-shadow {
+    text-align: center;
+    padding-left:0px; 
+    padding-right:0px; 
+    border: 1px solid gray;
+}
+
+.hide-mnemonic #mnemonic { width:0px; }
+.hide-mnemonic #mnemonic-shadow { width:600px; }
+.show-mnemonic #mnemonic { width:600px; }
+.show-mnemonic #mnemonic-shadow { width:0px; }
+.hide-mnemonic #hide-mnemonic-link { display:none }
+.show-mnemonic #show-mnemonic-link { display:none }
+
+#mnemonic-shadow {
+  -webkit-transition: width 1s; /* For Safari 3.1 to 6.0 */
+  transition: width 1s;
+}
+
+#mnemonic {
+  -webkit-transition: width 1s; /* For Safari 3.1 to 6.0 */
+  transition: width 1s;
+}
+
+/* body:not(.mnemonic-created-and-confirmed) #remember-mnemonic-button,#forget-mnemonic-button{ display:none } */
+body.mnemonic-stored #remember-mnemonic-button { display: none; }
+body:not(.mnemonic-stored) #forget-mnemonic-button { display: none; }
+
+
+input.pubkey { }

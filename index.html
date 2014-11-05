@@ -3,18 +3,15 @@
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
 		<meta charset="utf-8">
-		<title>By My Coins: Smart contracts with your future self</title>
+		<title>SponsoredWalk.net</title>
 		<meta name="generator" content="Bootply" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 		<link href="css/bootstrap.min.css" rel="stylesheet">
 		<link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
 
         <link rel="stylesheet" href="fontello/css/fontello.css" type="text/css" media="all" />
-        <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css" />
+        <link rel="stylesheet" href="css/jquery-ui.css" />
 
-		<!--[if lt IE 9]>
-			<script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
-		<![endif]-->
 		<link href="css/styles.css" rel="stylesheet">
 	</head>
   <body >
@@ -27,174 +24,142 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="#">BY MY COINS</a>
+      <a class="navbar-brand" href="#">SPONSORED WALK .net</a>
     </div>
     <div class="navbar-collapse collapse" id="navbar-collapsible">
       <ul class="nav navbar-nav navbar-left">
-        <li><a class="individuals-only list-view needs-mnemonic-created-and-confirmed" href="#section1">I Swear</a></li>
-        <li><a href="#section2">My Secret</a></li>
-        <li><a href="#section3">Lock Up Coins</a></li>
       </ul>
-      <ul class="nav navbar-nav navbar-right">
-        <li class="individuals-only list-view needs-mnemonic-created-and-confirmed" ><a href="#section5">Claim Coins</a></li>
-      </ul>
-
-
     </div>
   </div>
 </nav>
 
+<div>
 
-<section class="container-fluid goal-section needs-connect" id="section1">
-
-<div class="individuals-only list-view">
-<a class="linkable-anchor" name="set-goal">&nbsp;</a>
-</div>
-    <h1 class="text-center contract-title-start-zz"></h1>
-<form action="#view-single-goal" id="set-goal-form" class="form-horizontal create-not-ready" role="form">
-<!--
-Some people may prefer single instance, but for now let's keep it simple
--->
-<input type="hidden" id="measurement" value="cumulative_distance" />
-<div class="form-group">
-    <label for="user" class="control-label col-md-6">I<span class="user-text"></span> swear by my <span class="coin-type-text">coins</span></label>
-    <div class="col-md-3">
-    <select id="is-testnet" class="form-control ">
-        <option selected="selected" value="0">Testnet Coins (Recommended)</option>
-        <option value="1">Bitcoins (Use at your own risk!)</option>
-    </select>
-    </div>
-    <input class="form-control" type="text" id="user" placeholder="User on RunKeeper" value="" />
+<br />
+<br />
 </div>
 
-<div class="form-group">
-    <label class="control-label col-md-6">to <span class="activity-verb">walk</span></label>
-    <div class="col-md-6">
-      <img class="activity-icon visible-md-inline visible-lg-inline" data-activity="running" src="img/icons/PNG/32/Sports/running-32.png">
-      <img class="activity-icon visible-md-inline visible-lg-inline" data-activity="walking" src="img/icons/PNG/32/Sports/walking-32.png">
-      <select id="activity" class="form-control hidden-md hidden-lg">
+<div class="container-fluid goal-div needs-connect" id="div1">
+
+<div>
+    <form id="user-key-form" class="hide-mnemonic">
+        <h3 class="">Your Secret</h3>
+        <p>We have made you a secret list of words for you. Anyone who has this list of words can claim your bitcoins. 
+        <br />
+        Make sure you keep a copy of this safe to be sure you can get your bitcoins back.</p>
+        <input class="" id="mnemonic" type="text" placeholder="Your secret words" /><input id="mnemonic-shadow" type="text" value="**** ****** ******* ***** ***** ****** ******* *** *****" />  <a id="show-mnemonic-link" href="#">Show</a> <a id="hide-mnemonic-link" href="#">Hide</a>
+        <!--
+        <br />
+        <input style="width:500px" class="btn btn-primary" id="confirm-mnemonic-button" value="Use this secret (I've made a copy)" />
+        -->
+        <br />
+        <input style="" size="50" class="btn btn-primary" id="remember-mnemonic-button" value="Store this secret in your browser" />
+        <input style="" size="60" class="btn btn-primary" id="forget-mnemonic-button" value="Don't store this secret in your browser (more secure)" />
+        <br />
+        <br />
+        Your Private Key: <input type="text" id="your-private-key" size="70" />
+    </form>
+</div>
+
+<hr />
+
+
+<h3>Sponsor</h3>
+
+<form method="POST" action="#" id="create-reality-key-form" class="create-not-ready" role="form">
+
+    <input type="hidden" name="setting_default_days_in_future" value="14">
+
+    <a href="http://runkeeper.com/user/edochan">edochan</a></h3>
+    <input type="text" name="user_id" placeholder="User on RunKeeper" value="29908850" />
+    to
+    <select name="activity" class="">
         <option value=""></option>
         <option data-verb="run" data-unit="m" value="running">run</option>
         <option data-verb="walk" data-unit="m" value="walking" selected>walk</option>
-      </select>
-    </div>
-</div>
-
-<div class="form-group">
-    <label class="control-label col-md-6"><span class="goal-text"></span></label>
-    <div class="col-md-1">
-        <input style="height:36px" size="8" class="form-control" type="text" id="goal" placeholder="Goal" value="1000"> 
-    </div>
-</div>
-
-<div class="form-group">
-    <label class="control-label col-md-6">by <span class="settlement-date-text"></span></label>
-    <div class="col-md-2">
-        <input size="8" type="text" id="settlement_date" placeholder="Date" value="" class="form-control">
-    </div>
-</div>
-
-<div class="form-group">
-    <label class="control-label col-md-6">
-        or they go to <span class="charity-display-text"></span>
-    </label>
-    <div class="col-md-6">
-        <div class="visible-lg-block visible-md-block">
-            <img class="charity-icon " data-charity="03b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad3" width="64" height="64" src="img/charities/chika_kickboxing_128.png" />
-            <img class="charity-icon " data-charity="other" width="64" height="64" src="img/charities/other_128.png" />
-        </div>
-        <div class="visible-sm-block visible-xs-block">
-            <select id="charity-select" class="form-control ">
-                <option value="03b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad3">Chika Edgar Kickboxing Fund</option>
-                <option value="other">Other (enter public key below)</option>
-            </select> 
-        </div>
-        <div>
-            <input class="form-control initialized-only" type="text" id="charity-public-key" placeholder="Charity Public Key">
-        </div>
-    </div>
-</div>
-
-    <!--
-    <input type="text" id="override-with-existing-fact-id" class="for-debugging" />
-    <select class="form-control" id="measurement">
-        <option value="total_distance">Distance (Total)</option>
-        <option value="cumulative_distance" selected>Distance (Cumulative)</option>
     </select>
-    -->
+    a
+    <input type="text" name="measurement" value="cumulative_distance" />
+    of
+    <input size="8" class="" type="text" name="goal" placeholder="Goal" value="1000"> 
+    meters by
+    <input size="8" type="text" name="settlement_date" placeholder="Date" value="" class="">
+    <input id="register-fact-button" class="btn btn-primary " type="submit" value="Register" />
+    <input type="text" id="override-with-existing-fact-id" value="243" name="override-with-existing-fact-id" />
+</form>
 
-<div class="form-group button-row">
-    <div class="col-md-12 text-center">
-        <a id="authenticate-runkeeper-user" type="button" class="btn btn-primary btn-authenticate-runkeeper-user initialized-only">Connect to RunKeeper</a>
-        <a class="btn btn-primary jump-to-secret" href="#section2">Next (set secret)</a>
-        <button id="set-goal-submit" type="submit" class="btn btn-primary set-goal-submit">Set this goal</button>
-    </div>
-</div>
+<hr />
+
+<div>
+<form id="make-address-form">
+  	<h3 class="">Pay</h3>
+
+
+    Reality Keys ID: <input size="7" id="reality-key-id" type="text" />
+    <br />
+    <table>
+    <tr>
+    <td>
+        Our key
+    </td>
+    <td>
+        <input size="66" class="pubkey" id="our-pub-key" type="text" value="03b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad3" />
+    </td>
+    <td>
+        Your key
+    </td>
+    <td>
+        <input size="66" class="pubkey" id="your-pub-key" type="text" value="03b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad3" />
+    </td>
+    </tr>
+    <tr>
+    <td>
+        Yes key
+    </td>
+    <td>
+        <input size="66" class="pubkey" id="yes-pub-key" type="text" />
+    </td>
+    <td>
+        No key
+    </td>
+    <td>
+        <input size="66" class="pubkey" id="no-pub-key" type="text" />
+    </td>
+    </tr>
+    </table>
+
+    <br />
+    <select id="network" class="">
+        <option selected="selected" value="testnet">Testnet Coins</option>
+        <option value="livenet">Bitcoins (Use at your own risk!)</option>
+    </select>
+    <input id="make-address-button" type="submit" class="btn btn-primary" value="Make address" />
 
 </form>
-</section>
+</div>
 
-<section class="container-fluid secret-section" id="section2">
-<a class="linkable-anchor" name="secret">&nbsp;</a>
-  	<h3 class="text-center">Your Secret</h3>
+<div>
+<form id="address-check-form">
+    <h3>Check</h3>
+    Address <input id="funding-address" type="text" size="38" /> 
+    <input id="check-address" type="submit" class="btn btn-primary" value="Check address" />
+    <div><span id="address-balance"></span> BTC</div>
+</form>
+</div>
+
+<div>
+<form id="claim-form">
+    <h3>Withdraw</h3>
+    Winner Key <input size="58" id="winner-privkey" type="text" /> 
     <br />
-    <h4 class="text-center">We have made you a secret list of words for you. Anyone who has this list of words can claim your bitcoins.</h4>
-    <h4 class="text-center">Make sure you keep a copy of this safe to be sure you can get your bitcoins back.</h4>
-    <br />
-  	<div class="row ">
-        <div class=" col-md-8 col-sm-12 col-xs-12 col-md-offset-2">
-            <input class="form-control" id="mnemonic" type="text" placeholder="Your secret words" />
-        </div>
-    </div>
-    <br />
-  	<div class="row ">
-        <div class="col-lg-8 col-md-8 col-sm-12 col-xs-12 col-md-offset-2 col-lg-offset-2">
-        <input class="btn btn-primary col-sm-12 col-xs-12 col-md-12 col-lg-12" id="confirm-mnemonic-button" value="I have made a copy of these words, and I will keep them secret." />
-        </div>
-    </div>
+    Address <input size="38" id="withdraw-to-address" type="text" /> 
+    <input id="claim-from-address" type="submit" class="btn btn-primary" value="Claim funds" />
+</form>
+</div>
 
-    <br />
-    <br />
-  	<div class="row public-key-display">
-        <h4 class="text-center">Does someone want to pay you if they don't reach their goal? Give them this public key:</h4>
-        <h4 class="text-center" id="public-key"></span>
-  	</div>
-</section>
 
-<section class="container-fluid" id="section3" class="goal-view-section">
-    <div class="unpopulated-only text-center">
-        <h3><a href="#">Please set a goal first, then come back here to fund it and tweet about it.</a></h3>
-    </div>
-    <div class="populating-only text-center">
-        <h3><a href="#">Loading...</a></h3>
-    </div>
-    <div class="row populated-only">
-      <div class="col-sm-12 text-center">
-          <h2 class="contract-title-start"></h2>
-          <h3 class="contract-title-end"></h3>
-          <h2 ><a href="#" id="view-contract-payable-address"></a></h2>
-          
-        <!--
-          <h4><i>Tip: Anyone can pay this address! Why not ask your friends to sponsor you?</i></h4>
-        -->
-          <br />
-          <h4>We haven't told anyone about your pledge yet, not even the charity!</h4>
-          <h4>Tweet the address of this page to <a href="https://www.twitter.com/bymycoins">@bymycoins</a>.</h4>
-          <br />
-          <span class=""><a id="twitter-button" target="twitter-window" href="#"><img src="img/icons/PNG/128/Social_Networks/twitter-128.png"></a></span>
-      </div>
-    </div>
 
-    <div class="row populated-only">
-      <div class="col-sm-12 text-center">
-          <button id="view-goal-store" type="submit" class="btn btn-primary">Store for later</button>
-      </div>
-    </div>
-
-</section>
-
-<section class="container-fluid" id="section5">
-
+<!--
             <table id="claim-form" class="">
                   <tbody><tr class="">
                     <th data-type="status-funds" class="col-md-1">
@@ -245,15 +210,7 @@ Some people may prefer single instance, but for now let's keep it simple
 
               </tbody></table>
 
-</section>
-
-
-<footer id="footer">
-  <div class="container-fluid">
-    <div class="row">    
-    </div><!--/row-->
-  </div>
-</footer>
+-->
 
 	<!-- script references -->
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
@@ -263,40 +220,12 @@ Some people may prefer single instance, but for now let's keep it simple
     <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
     <script src="js/bitcore.js"></script>
     <script src="js/bitcore_monkey_patches.js"></script>
-    <script src="js/mnemonic.js"></script>
+    <script src="js/bip39.js"></script>
     <script src="js/bootbox.min.js"></script>
-    <script src="js/bymycoins.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/sponsored.js"></script>
     <script>
     initialize_page();
     </script>
-
-<!--
-  <div class="charities-only list-view">
-  <a class="linkable-anchor charities-only" name="import">&nbsp;</a>
-  </div>
-
-  <div class="panel panel-default charities-only list-view" id="import-section">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-          <span class="individual-only">Import</span><span class="charity-only">Load pacts</span>
-      </h4>
-    </div>
-    <div >
-      <div class="panel-body">
-              <form id="import-form" class="form-horizontal">
-                <fieldset>
-                  <div class="row form-group load-row" style="text-align:center">
-                    <span data-type="add" class="col-md-8"><input id="import-contract-url" name="import-contract-url" type="text" placeholder="Load from URL" class="form-control" /></span>
-                    <span data-type="add" class="col-md-2">&nbsp;</span>
-                    <span data-type="load-button" class="col-md-2"><button type="submit" class="btn btn-primary action-button load-button">Load</button></span>
-                  </div>
-                </fieldset>
-              </form>
-      </div>
-    </div>
-  </div>
--->
-
-
   </body>
 </html>
