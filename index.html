@@ -14,7 +14,7 @@
 
 		<link href="css/styles.css" rel="stylesheet">
 	</head>
-  <body >
+  <body class="hide-advanced">
 <nav class="navbar navbar-trans navbar-fixed-top" role="navigation">
   <div class="container-fluid">
     <div class="navbar-header">
@@ -55,18 +55,22 @@
         <br />
         <input style="" size="50" class="btn btn-primary" id="remember-mnemonic-button" value="Store this secret in your browser" />
         <input style="" size="60" class="btn btn-primary" id="forget-mnemonic-button" value="Don't store this secret in your browser (more secure)" />
+        <div class="advanced">
         <br />
         <br />
         Your Private Key: <input type="text" id="your-private-key" size="70" />
+        </div>
     </form>
+
+    <hr />
+
 </div>
 
-<hr />
-
+<div class="advanced" >
 
 <h3>Sponsor</h3>
 
-<form method="POST" action="#" id="create-reality-key-form" class="create-not-ready" role="form">
+<form method="POST" action="#" id="create-reality-key-form" class="create-not-ready advanced" role="form">
 
     <input type="hidden" name="setting_default_days_in_future" value="14">
 
@@ -90,10 +94,12 @@
 
 <hr />
 
-<div>
+</div>
+
+<div class="advanced" >
+
 <form id="make-address-form">
   	<h3 class="">Pay</h3>
-
 
     Reality Keys ID: <input size="7" id="reality-key-id" type="text" />
     <br />
@@ -109,7 +115,7 @@
         Your key
     </td>
     <td>
-        <input size="66" class="pubkey" id="your-pub-key" type="text" value="03b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad3" />
+        <input size="66" class="pubkey" id="your-pub-key" type="text" value="" />
     </td>
     </tr>
     <tr>
@@ -128,30 +134,38 @@
     </tr>
     </table>
 
-    <br />
     <select id="network" class="">
-        <option selected="selected" value="testnet">Testnet Coins</option>
-        <option value="livenet">Bitcoins (Use at your own risk!)</option>
+        <option selected="selected" value="livenet">Bitcoins (Use at your own risk!)</option>
+        <option value="testnet">Testnet Coins</option>
     </select>
-    <input id="make-address-button" type="submit" class="btn btn-primary" value="Make address" />
+
+    <br />
+
+
+
+    <br />
+        <input id="make-address-button" type="submit" class="btn btn-primary" value="Make address" />
 
 </form>
+
 </div>
 
-<div>
+<div class="">
 <form id="address-check-form">
-    <h3>Check</h3>
+    <h3>Pay</h3>
     Address <input id="funding-address" type="text" size="38" /> 
     <input id="check-address" type="submit" class="btn btn-primary" value="Check address" />
-    <div><span id="address-balance"></span> BTC</div>
+    <div>You've paid <span id="address-balance"></span> BTC so far.</div>
 </form>
 </div>
 
 <div>
 <form id="claim-form">
-    <h3>Withdraw</h3>
+    <h3>Claim funds</h3>
+    <div class="advanced">
     Winner Key <input size="58" id="winner-privkey" type="text" /> 
     <br />
+    </div>
     Address <input size="38" id="withdraw-to-address" type="text" /> 
     <input id="claim-from-address" type="submit" class="btn btn-primary" value="Claim funds" />
 </form>
@@ -211,6 +225,12 @@
               </tbody></table>
 
 -->
+
+    <div class="advanced-toggle">
+    <hr />
+    <a href="#" class="basic" id="show-advanced">Show detail</a>
+    <a href="#" class="advanced" id="hide-advanced">Hide detail</a>
+    </div>
 
 	<!-- script references -->
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>

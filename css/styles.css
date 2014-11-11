@@ -251,5 +251,7 @@ We use visibility hidden here instead of display none to avoid confusing the bro
 body.mnemonic-stored #remember-mnemonic-button { display: none; }
 body:not(.mnemonic-stored) #forget-mnemonic-button { display: none; }
 
+body.hide-advanced .advanced { display: none; }
+body:not(.hide-advanced) .basic { display: none; }
 
 input.pubkey { }

@@ -313,7 +313,32 @@ console.log(c251t_tx_hex_wrong);
 
     }
 
-    function store_contract(c, is_update) {
+    function store_contract(c, is_update, success_callback) {
+
+        var url = pubkey_record_store;
+        $.ajax({
+            url: url, 
+            type: 'POST',
+            dataType: 'json', 
+            data: {
+                'yes_user_pubkey': c['yes_user_pubkey'],
+                'no_user_pubkey': c['no_user_pubkey'],
+                'yes_pubkey': c['yes_pubkey'],
+                'no_pubkey': c['no_pubkey'],
+                'address': c['address'],
+                'site_resource_id': 'TODO',
+                'realitykeys_id': c['id'],
+            }
+        }).done( function(data) {
+            success_callback(data);
+        }).fail( function(data) {
+            return;
+        }).always( function(data) {
+            console.log("store response", data);
+        });
+
+
+        console.log("store: ",c);
         return;
 
         //console.log("storing:");
@@ -1030,22 +1055,9 @@ console.log("import import_hash "+import_hash);
 
     }
 
-    function execute_claim(to_addr, c, txes, winner_privkey, network) {
-        var i;
-        //console.log("executing claim");
-        //console.log(c);
+    function execute_claim(to_addr, c, txes, user_privkey, winner_privkey, network) {
 
-        //console.log("trying to find priv for ");
-        //console.log(c['yes_user_pubkey']);
-        var user_privkey = stored_priv_for_pub(c['yes_user_pubkey']);
-        if (user_privkey == null) {
-            user_privkey = stored_priv_for_pub(c['no_user_pubkey']);
-        }
-        if (user_privkey == null) {
-            console.log("user_privkey: ",user_privkey);
-            bootbox.alert('You do not appear to have the key you need to claim these bitcoins.');
-            return false;
-        }
+        var i;
 
         if (txes.length == 0) {
             bootbox.alert('Could not find any funds to claim. Maybe they have already been claimed?');
@@ -1056,7 +1068,7 @@ console.log("import import_hash "+import_hash);
         // We should really make one single transaction for all of them.
         for (i=0; i < txes.length; i++) {
             
-            var txHex = hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c); 
+            var txHex = hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
 console.log(txHex);
 
             // For now our spending transaction is non-standard, so we have to send to eligius.
@@ -1064,20 +1076,31 @@ console.log(txHex);
             // Presumably they do not support CORS, and we have to submit to their web form.
             // We will send our data by putting it in an iframe and submitting it.
             // We will not be able to read the result from the script, although we could make it visible to the user.
-            if (network == 'livenet') {
+            if (true && network == 'livenet') {
                 eligius_cross_domain_post(txHex);
             } else {
                 // this will always be testnet until the happy day when bitcore makes our transactions standard
-                var url = (network == 'testnet') ? 'https://tbtc.blockr.io/api/v1/tx/push' : 'https://btc.blockr.io/api/v1/tx/push';
+                //var url = (network == 'testnet') ? 'https://tbtc.blockr.io/api/v1/tx/push' : 'https://btc.blockr.io/api/v1/tx/push';
+                var url = null;
+                var tx_data = {};
+                if (network == 'testnet') {
+                    url = 'https://tbtc.blockr.io/api/v1/tx/push';
+                    tx_data['hex'] = txHex;
+                } else {
+                    url = 'https://blockchain.info/pushtx?cors=true';   
+                    tx_data['tx'] = txHex;
+                }
                 $.ajax({
                     type: "POST",
                     url: url,
-                    data: {'hex': txHex },
+                    data: tx_data,
                     success: function( response ) {
-                        var txid = response['data'];
                         console.log(response);
-                        c['claim_txid'] = txid;
-                        store_contract(c, true);
+                        if (network == 'testnet') {
+                            var txid = response['data'];
+                            c['claim_txid'] = txid;
+                            store_contract(c, true);
+                        }
                     },
                     error: function ( response ) {
                         bootbox.alert('Sending transaction failed.');
@@ -1089,52 +1112,63 @@ console.log(txHex);
         }
     }
 
+    function hex_for_claim_execution(to_addr, priv1, priv2, tx, c, network) {
 
-    function hex_for_claim_execution(to_addr, priv1, priv2, tx, c) {
-        var tx = tx_for_claim_execution(to_addr, priv1, priv2, tx, c); 
+        var tx = tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network); 
+        console.log("tx_for_claim_execution:", tx);
         var txHex =  tx.serialize().toString('hex');
         //console.log(txHex);
 
         return txHex;
 
-
     }
 
-    function tx_for_claim_execution(to_addr, priv1, priv2, tx, c) {
+    function tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network) {
 
-        var network = c['is_testnet'] ? bitcore.networks['testnet'] : bitcore.networks['livenet'];
-
+console.log("claim for network", network);
         //console.log(tx);
-        var n = tx['n'];
-        var txid = tx['tx'];
-        var amount = tx['amount'];
+        var amount = tx.hasOwnProperty('value') ? tx['value'] : (tx['amount'] * 100000000); // handle blockchain and blockr formats
+        var txid;
+        if (tx.hasOwnProperty('tx_hash')) {
+            // blockchain.info gives us the txid backwards...
+            txid = txid = tx['tx_hash'].match(/.{2}/g).reverse().join("");
+            console.log("after", txid);
+        } else {
+            txid = tx['tx'];
+        }
+        var vout = tx.hasOwnProperty('tx_output_n') ? tx['tx_output_n'] : tx['n'];
+
         //console.log(tx);
 
         //alert('Next step: make tx for '+n+','+txid+','+amount);
         var utxos2 = [
         {
             address: c['address'],
-            txid: tx['tx'],
-            vout: tx['n'],
+            txid: txid, // handle blockchain and blockr formats
+            vout: vout,
             ts: 1396375187,
-            scriptPubKey: tx['script'],
-            amount: amount,
+            scriptPubKey: tx['script'], // same for blockr and blockchain.info
+            amount: amount/100000000,
             confirmations: 1
         }
         ];
+        console.log("made utxos2", utxos2);
 
         var pubkeys = [
             [ c['yes_user_pubkey'], c['yes_pubkey'] ],
             [ c['no_user_pubkey'], c['no_pubkey'] ],
             [ c['yes_user_pubkey'], c['no_user_pubkey'] ]
         ];
-        //console.log(pubkeys);
+        console.log("pubkeys", pubkeys);
+        console.log("priv1", priv1);
+        console.log("priv2", priv2);
+        console.log("amount", amount);
 
-        var opts = {network: network, nreq:[2,2,2], pubkeys:pubkeys};
-        var fee = 10000 / 100000000;
+        var opts = {network: bitcore.networks[network], nreq:[2,2,2], pubkeys:pubkeys};
+        var fee = 10000;
 
-
-        outs = [{address:to_addr, amount:(amount-fee)}];
+        outs = [{address:to_addr, amount:((amount-fee)/100000000)}];
+        console.log("amount-fee", (amount-fee));
         //console.log("outs:");
         //console.log(outs);
 
@@ -1156,19 +1190,22 @@ console.log(txHex);
         //console.log("winner_privkey:");
         //console.log(winner_privkey);
 
-        var user_wk = new bitcore.WalletKey({ network: network });
+        var user_wk = new bitcore.WalletKey({ network: bitcore.networks[network]});
         user_wk.fromObj( {
             priv: priv1,
         });
         var user_wk_obj = user_wk.storeObj();
         var user_privkey_wif = user_wk_obj.priv;
 
-        var winner_wk = new bitcore.WalletKey({ network: network });
+        var winner_wk = new bitcore.WalletKey({ network: bitcore.networks[network]});
         winner_wk.fromObj( {
             priv: priv2,
         });
         var winner_wk_obj = winner_wk.storeObj();
         var winner_privkey_wif = winner_wk_obj.priv;
+
+        console.log("priv1wif", user_privkey_wif);
+        console.log("priv2wif", winner_privkey_wif);
 
         b.sign([user_privkey_wif, winner_privkey_wif]);
         //b.sign([winner_privkey, winner_privkey]);
@@ -1689,11 +1726,9 @@ console.log(txHex);
         });
 
         $('#forget-mnemonic-button').unbind('click').click( function() {
-
             var mnemonic_text = $('#mnemonic').val();
             delete_stored_key(mnemonic_text);
             $('body').removeClass('mnemonic-stored');
-
         });
 
         if (default_mnemonic = default_stored_mnemnonic()) {
@@ -1736,12 +1771,30 @@ console.log(txHex);
             'no_user_pubkey': $('#your-pub-key').val(),
             'yes_pubkey': $('#yes-pub-key').val(),
             'no_pubkey': $('#no-pub-key').val(),
+            'id': $('#reality-key-id').val(),
             'network': $('#network').val()
         };
         console.log('keys:',keys);
         var addr = p2sh_address(keys);
+        keys['address'] = addr; // used by store
         $('#funding-address').val(addr);
-        handle_funding_address_update(addr);
+
+        var offline = false;
+        if (offline) {
+            handle_funding_address_update(addr);
+        } else {
+            if (addr != $('#funding-address').val(addr)) {
+                // clea rthe funding address until we've made sure to sture the key data
+                $('#funding-address').val(''); 
+            }
+            if (addr != '') {
+                store_contract(keys, false, function() {
+                    $('#funding-address').val(addr);
+                    handle_funding_address_update(addr);
+                });
+            }
+        }
+        
     }
 
     function handle_funding_address_update(addr) {
@@ -1753,6 +1806,12 @@ console.log(txHex);
             update_funding_address();
             return false;
         });
+        $('#our-pub-key').change(update_funding_address);
+        $('#your-pub-key').change(update_funding_address);
+        $('#yes-pub-key').change(update_funding_address);
+        $('#no-pub-key').change(update_funding_address);
+        $('#network').change(update_funding_address);
+
         return false;
     }
 
@@ -1772,18 +1831,47 @@ console.log(txHex);
     function show_address_balance(addr, network) {
 
         $('body').addClass('fetching-balance');
-        var url = network == 'livenet' ? 'https://btc.blockr.io/api/v1/address/balance/'+addr : 'https://tbtc.blockr.io/api/v1/address/balance/'+addr; 
-        url = url + '?confirmations=0';
+
+        var url;
+        if (network == 'livenet') {
+            url = 'https://blockchain.info/unspent?cors=true&active='+addr; 
+        } else {
+            url = 'https://tbtc.blockr.io/api/v1/address/balance/'+addr;    
+            url = url + '?confirmations=0';
+            url = url + '&unconfirmed=1'; // unspent seems to need both of these
+        }
+
+        console.log("fetching unspent:");
+        $('body').addClass('fetching-balance-for-claim');
+            
         $.ajax({
             url: url, 
             type: 'GET',
             dataType: 'json'
         }).done( function(data) {
-            var balance = data['data']['balance'];
+            var balance = 0;
+            if (network == 'livenet') {
+                var unspents = data['unspent_outputs'];
+                console.log("unspent_outputs:", unspents);
+                for (u in unspents) {
+                    if (unspents.hasOwnProperty(u)) {
+                        u_obj = unspents[u];
+                        console.log("got unspent", u_obj);
+                        if (u_obj['value']) {
+                            balance = balance + u_obj['value'];
+                            console.log(balance);
+                        }
+                    }
+                }
+                balance = balance / 100000000;
+            } else {
+                balance = data['data']['balance'];
+            }
             $('#address-balance').html(balance);
-        }).fail( function() {
-            console.log("could not fetch");
-            console.log(data);
+        }).fail( function(data) {
+            console.log(data.responseText);
+            // With blockchain over 
+            $('#address-balance').html('0');
         }).always( function() {
             $('body').removeClass('fetching-balance');
         });
@@ -1799,24 +1887,32 @@ console.log(txHex);
                 return false;
             }
 
+            var network = $('#network').val();
+
             // Recreate the address to make sure it matches the keys
             var keys = {
                 'yes_user_pubkey': $('#our-pub-key').val(),
                 'no_user_pubkey': $('#your-pub-key').val(),
                 'yes_pubkey': $('#yes-pub-key').val(),
                 'no_pubkey': $('#no-pub-key').val(),
-                'network': $('#network').val()
+                'network': network
             };
             var addr = p2sh_address(keys);
+            keys['address'] = addr;
             if ($('#funding-address').val() != addr) {
                 console.log("check addr was",$('#funding-address').val(),"but recreated addr was",addr,keys);
                 bootbox.alert('The addresses do not the match keys');
                 return false;
             }
 
-            var url = network == 'livenet' ? 'https://btc.blockr.io/api/v1/address/unspent/'+addr : 'https://tbtc.blockr.io/api/v1/address/unspent/'+addr; 
-            url = url + '?confirmations=0';
-            url = url + '&unconfirmed=1'; // unspent seems to need both of these
+            var url;
+            if (network == 'livenet') {
+                url = 'https://blockchain.info/unspent?cors=true&active='+addr; 
+            } else {
+                url = 'https://tbtc.blockr.io/api/v1/address/unspent/'+addr;    
+                url = url + '?confirmations=0';
+                url = url + '&unconfirmed=1'; // unspent seems to need both of these
+            }
             console.log("fetching unspent:");
             $('body').addClass('fetching-balance-for-claim');
             $.ajax({
@@ -1824,14 +1920,40 @@ console.log(txHex);
                 type: 'GET',
                 dataType: 'json'
             }).done( function(data) {
-                var txes = data['data']['unspent'];
-                execute_claim(withdraw_to_addr, keys, txes, $('#winner-privkey').val(), $('#network').val());
-            }).fail( function() {
+                var txes;
+                if (network == 'livenet') { 
+                    txes = [];
+                    outputs = data['unspent_outputs'];
+                    for (var o in outputs) {
+                        if (outputs.hasOwnProperty(o)) {
+                            txes.push(outputs[o]);
+                        }
+                    }
+                } else {
+                    txes = data['data']['unspent'];
+                }
+                console.log("executing claim for txes", txes);
+                execute_claim(withdraw_to_addr, keys, txes, $('#your-private-key').val(), $('#winner-privkey').val(), network);
+            }).fail( function(data) {
                 console.log("could not fetch");
-                console.log(data);
+                console.log(data.responseText);
             }).always( function() {
                 $('body').removeClass('fetching-balance-for-claim');
             });
+            return false;
+        });
+
+    }
+
+    function setup_advanced_toggle() {
+
+        $('#show-advanced').click( function() {
+            $('body').removeClass('hide-advanced');
+            return false;
+        });
+
+        $('#hide-advanced').click( function() {
+            $('body').addClass('hide-advanced');
             return false;
         });
 
@@ -1844,6 +1966,7 @@ console.log(txHex);
         setup_make_address_form($('#make-address-form'));
         setup_check_form($('#address-check-form'));
         setup_claim_form($('#claim-form'));
+        setup_advanced_toggle();
 
         // Don't wait for a button click - create an address on defaults
         handle_submit_create_reality_key_form($('#create-reality-key-form'));
