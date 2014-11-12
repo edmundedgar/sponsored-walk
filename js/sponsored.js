@@ -313,7 +313,7 @@ console.log(c251t_tx_hex_wrong);
 
     }
 
-    function store_contract(c, is_update, success_callback) {
+    function store_contract(c, is_update, success_callback, fail_callback) {
 
         var url = pubkey_record_store;
         $.ajax({
@@ -326,12 +326,17 @@ console.log(c251t_tx_hex_wrong);
                 'yes_pubkey': c['yes_pubkey'],
                 'no_pubkey': c['no_pubkey'],
                 'address': c['address'],
-                'site_resource_id': 'TODO',
+                'site_resource_id': c['site_resource_id'],
                 'realitykeys_id': c['id'],
             }
         }).done( function(data) {
+            if (data['status'] != 'success') {
+                fail_callback(data);
+                return;
+            }
             success_callback(data);
         }).fail( function(data) {
+            fail_callback(data);
             return;
         }).always( function(data) {
             console.log("store response", data);
@@ -1018,7 +1023,7 @@ console.log("import import_hash "+import_hash);
 
     function eligius_cross_domain_post(data) {
 
-        // Some browsers refuse to do http posts from https pages
+        // Some browsers sensibly refuse to do http posts from https pages
         // For now proxy eligius over https to work around this 
         // If helper.bymycoins.com goes away you may need to restore eligius and tinker with browser settings
         //var url = 'http://eligius.st/~wizkid057/newstats/pushtxn.php';
@@ -1068,15 +1073,24 @@ console.log("import import_hash "+import_hash);
         // We should really make one single transaction for all of them.
         for (i=0; i < txes.length; i++) {
             
-            var txHex = hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
-console.log(txHex);
+            var txHex = null;
+            try {
+                txHex = hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
+            } catch (e) {
+                console.log("hex creation failed", e);
+                continue;
+            }
+            console.log(txHex);
 
             // For now our spending transaction is non-standard, so we have to send to eligius.
             // Hopefully this will be fixed in bitcoin core fairly soon, and we can use same the blockr code for testnet.
             // Presumably they do not support CORS, and we have to submit to their web form.
             // We will send our data by putting it in an iframe and submitting it.
             // We will not be able to read the result from the script, although we could make it visible to the user.
-            if (true && network == 'livenet') {
+            if (network == 'livenet' && pushtx_livenet == 'none') {
+                console.log('created but will not broadcast', txHex);
+                return;
+            } else if (network == 'livenet' && pushtx_livenet == 'eligius') {
                 eligius_cross_domain_post(txHex);
             } else {
                 // this will always be testnet until the happy day when bitcore makes our transactions standard
@@ -1098,6 +1112,10 @@ console.log(txHex);
                         console.log(response);
                         if (network == 'testnet') {
                             var txid = response['data'];
+                            if (network == 'livenet' && pushtx_livenet == 'both') {
+                                // submit direct to eligius just to be sure...
+                                eligius_cross_domain_post(txHex);
+                            }
                             c['claim_txid'] = txid;
                             store_contract(c, true);
                         }
@@ -1164,8 +1182,8 @@ console.log("claim for network", network);
         console.log("priv2", priv2);
         console.log("amount", amount);
 
-        var opts = {network: bitcore.networks[network], nreq:[2,2,2], pubkeys:pubkeys};
-        var fee = 10000;
+        var fee = 20000;
+        var opts = {network: bitcore.networks[network], nreq:[2,2,2], pubkeys:pubkeys, fee: (fee)/100000000};
 
         outs = [{address:to_addr, amount:((amount-fee)/100000000)}];
         console.log("amount-fee", (amount-fee));
@@ -1766,21 +1784,27 @@ console.log("claim for network", network);
     }
 
     function update_funding_address() {
-        var keys = {
+
+        if ($('body').hasClass('claim-page')) {
+            return;
+        }
+
+        var c = {
             'yes_user_pubkey': $('#our-pub-key').val(),
             'no_user_pubkey': $('#your-pub-key').val(),
             'yes_pubkey': $('#yes-pub-key').val(),
             'no_pubkey': $('#no-pub-key').val(),
             'id': $('#reality-key-id').val(),
-            'network': $('#network').val()
+            'network': $('#network').val(),
+            'site_resource_id': $('#site-resource-id').val()
         };
-        console.log('keys:',keys);
-        var addr = p2sh_address(keys);
-        keys['address'] = addr; // used by store
-        $('#funding-address').val(addr);
+        console.log('c:',c);
+        var addr = p2sh_address(c);
+        c['address'] = addr; // used by store
 
         var offline = false;
         if (offline) {
+            $('#funding-address').val(addr);
             handle_funding_address_update(addr);
         } else {
             if (addr != $('#funding-address').val(addr)) {
@@ -1788,10 +1812,18 @@ console.log("claim for network", network);
                 $('#funding-address').val(''); 
             }
             if (addr != '') {
-                store_contract(keys, false, function() {
-                    $('#funding-address').val(addr);
-                    handle_funding_address_update(addr);
-                });
+                store_contract(
+                    c, 
+                    false, 
+                    function(data) {
+                        $('#funding-address').val(addr);
+                        handle_funding_address_update(addr);
+                    },
+                    function(data) {
+                        $('#funding-address').val(''); 
+                        console.log('storing contract failed', data);
+                    }
+                );
             }
         }
         
@@ -1799,6 +1831,61 @@ console.log("claim for network", network);
 
     function handle_funding_address_update(addr) {
         show_address_balance(addr, $('#network').val());
+    }
+
+    function fetch_contract_data_for_site_resource_id(site_resource_id, success_callback, fail_callback) {
+
+        $('body').addClass('fetching-contract-data');
+        var url = pubkey_record_query;
+
+        var response;
+        var request_type = 'GET';
+        var params = {'site_resource_id': site_resource_id}
+
+        console.log('Submitting to url');
+        console.log(url);
+        console.log(params);
+        $.ajax({
+            url: url, 
+            type: request_type,
+            data: params,
+            dataType: 'json', 
+        }).done(function(data) {
+            console.log('done');
+            console.log(data);
+            success_callback(data);
+            return true;
+        }).fail( function(data) {
+            console.log('fail');
+            console.log(data);
+            fail_callback(data);
+            return false;
+        }).always( function(data) {
+            console.log('always');
+            $('body').removeClass('fetching-contract-data');
+            return true;
+        });
+
+    }
+
+    function setup_claim_multiple_form(frm) {
+
+        var site_resource_id = $('#site-resource-id').val();
+        fetch_contract_data_for_site_resource_id(
+            site_resource_id,
+            function(data) {
+                var addresses = [];
+                for(var i=0; i < data['data'].length; i++) {
+                    console.log('item', data['data'][i]);
+                    addresses.push(data['data'][i]['address']); 
+                }
+                console.log("got addresses:",addresses);
+            },
+            function(data) {
+                alert('ng');
+            }
+        );
+
     }
 
     function setup_make_address_form(frm) {
@@ -1828,18 +1915,35 @@ console.log("claim for network", network);
 
     }
 
-    function show_address_balance(addr, network) {
-
-        $('body').addClass('fetching-balance');
-
-        var url;
+    function unspent_url_info(addr, network) {
+        var response_format = 'blockr';
         if (network == 'livenet') {
-            url = 'https://blockchain.info/unspent?cors=true&active='+addr; 
+            if (query_livenet == 'blockchain') {
+                url = 'https://blockchain.info/unspent?cors=true&active='+addr; 
+                response_format = 'blockchain';
+            } else {
+                url = 'https://btc.blockr.io/api/v1/address/balance/'+addr;    
+                url = url + '?confirmations=0';
+                url = url + '&unconfirmed=1'; // unspent seems to need both of these
+            }
         } else {
             url = 'https://tbtc.blockr.io/api/v1/address/balance/'+addr;    
             url = url + '?confirmations=0';
             url = url + '&unconfirmed=1'; // unspent seems to need both of these
         }
+        return {
+            'url': url,
+            'response_format': response_format
+        }
+    }
+
+    function show_address_balance(addr, network) {
+
+        $('body').addClass('fetching-balance');
+
+        var url_info = unspent_url_info(addr, network);;
+        var url = url_info['url'];
+        var response_format = url_info['response_format'];
 
         console.log("fetching unspent:");
         $('body').addClass('fetching-balance-for-claim');
@@ -1850,7 +1954,7 @@ console.log("claim for network", network);
             dataType: 'json'
         }).done( function(data) {
             var balance = 0;
-            if (network == 'livenet') {
+            if (response_format == 'blockchain') {
                 var unspents = data['unspent_outputs'];
                 console.log("unspent_outputs:", unspents);
                 for (u in unspents) {
@@ -1905,14 +2009,10 @@ console.log("claim for network", network);
                 return false;
             }
 
-            var url;
-            if (network == 'livenet') {
-                url = 'https://blockchain.info/unspent?cors=true&active='+addr; 
-            } else {
-                url = 'https://tbtc.blockr.io/api/v1/address/unspent/'+addr;    
-                url = url + '?confirmations=0';
-                url = url + '&unconfirmed=1'; // unspent seems to need both of these
-            }
+            var url_info = unspent_url_info(addr, network);;
+            var url = url_info['url'];
+            var response_format = url_info['response_format'];
+            
             console.log("fetching unspent:");
             $('body').addClass('fetching-balance-for-claim');
             $.ajax({
@@ -1921,7 +2021,7 @@ console.log("claim for network", network);
                 dataType: 'json'
             }).done( function(data) {
                 var txes;
-                if (network == 'livenet') { 
+                if (response_format == 'blockchain') { 
                     txes = [];
                     outputs = data['unspent_outputs'];
                     for (var o in outputs) {
@@ -1959,14 +2059,23 @@ console.log("claim for network", network);
 
     }
 
+    function populate_claim_form() {
+
+    }
+
     function initialize_page() {
 
         setup_user_key_form($('#user-key-form'));
         setup_reality_key_form($('#create-reality-key-form'));
-        setup_make_address_form($('#make-address-form'));
-        setup_check_form($('#address-check-form'));
-        setup_claim_form($('#claim-form'));
         setup_advanced_toggle();
+
+        if ($('body').hasClass('claim-page')) {
+            setup_claim_multiple_form();
+        } else {
+            setup_make_address_form($('#make-address-form'));
+            setup_check_form($('#address-check-form'));
+            setup_claim_form($('#claim-form'));
+        }
 
         // Don't wait for a button click - create an address on defaults
         handle_submit_create_reality_key_form($('#create-reality-key-form'));
