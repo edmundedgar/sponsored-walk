@@ -27,6 +27,10 @@
         }
     }
 
+    function satoshis_to_display_format(satoshis) {
+        return satoshis / 100000000;
+    }
+
     function format_fact_id(txt) {
         return parseInt(txt) + '';
     }
@@ -136,66 +140,151 @@
     }
 
     function test_transaction_cycle() {
-return;
-        var yes_user_mnemonic = 'glad everywhere alone rabbit daily bank date goal force glorious some freely';
-        var yes_user_mne = new Mnemonic(yes_user_mnemonic.split(' ')); 
-        var yes_user_seed = yes_user_mne.toHex();
-        var yes_user_key_obj = key_for_new_seed(yes_user_seed);
-        var yes_user_privkey = yes_user_key_obj['priv'];
-        var yes_user_pubkey = yes_user_key_obj['pub'];
-        assert(yes_user_pubkey == '03b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad3', 'Yes user pubkey as expected');
 
-        var no_user_mnemonic = 'manage wound those decide rule sadness confusion cheese house decision mutter girl';
-        var no_user_mne = new Mnemonic(no_user_mnemonic.split(' ')); 
-        var no_user_seed = no_user_mne.toHex();
-        var no_user_privkey_obj = key_for_new_seed(no_user_seed);
-        var no_user_privkey = no_user_privkey_obj['priv']
-        var no_user_pubkey = no_user_privkey_obj['pub']
-        assert(no_user_pubkey == '0213e0a3f741cd305571366ee3d30bfd819bd95b6f0d8dea0ee13a10dc3f6cf4e6', 'No user pubkey as expected');;
+        var yes_user_mnemonic = 'spider bus panic airport daring iron gloom current prize bonus witness hair';
+        var yes_user_seed = BIP39.mnemonicToSeedHex(yes_user_mnemonic);
+        var yes_user_privkey_obj = key_for_new_seed(yes_user_seed);
+        var yes_user_privkey = yes_user_privkey_obj['priv']
+        var yes_user_pubkey = yes_user_privkey_obj['pub']
+        assert(yes_user_pubkey == '02f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e', 'Yes user pubkey as expected');;
 
-        var cash_out_address = 'mrYtQCHVLFrvrkt7Wf3TEajsZ9UwDMDKCs';
+        var no_user_mnemonic = 'apology dove vessel defy apology unusual piano flush health polar bleak report';
+        var no_user_seed = BIP39.mnemonicToSeedHex(no_user_mnemonic);
+        var no_user_key_obj = key_for_new_seed(no_user_seed);
+        var no_user_privkey = no_user_key_obj['priv'];
+        var no_user_pubkey = no_user_key_obj['pub'];
+        assert(no_user_pubkey == '0247e6c3a88d76ab7505c147e5a9bcf0011226f7690081dd728042831f90a391ed', 'No user pubkey as expected');
+
+        var cash_out_address = '1Dc8JwPsxxwHJ9zX1ERYo9q7NQA9SRLqbC';
 
         // The following are previously-settled Reality Keys runkeeper facts
         // The resulting object should be the same as what you would get if you fetched the json from the api
 
-        // https://www.realitykeys.com/api/v1/runkeeper/251/?accept_terms_of_service=current
-        var yes_fact = {"no_pubkey": "03ead85d26a8339abffabe420a5cc23d9a12a0d005a7d248c80c0d43cf969236e3", "settlement_date": "2014-07-23", "objection_period_secs": 86400, "human_resolution_scheduled_datetime": null, "user_name": "edochan", "user_profile": "edochan", "user_id": "29908850", "measurement": "cumulative_distance", "evaluation_method": "ge", "is_user_authenticated": true, "objection_fee_satoshis_paid": 0, "machine_resolution_scheduled_datetime": "2014-07-23 00:00:00", "goal": "123", "created_datetime": "2014-07-23 03:30:47", "winner": "Yes", "value": "123", "id": 251, "source": "runkeeper", "yes_pubkey": "03ef92fd0593af4e10de665d1b25703a76af84349becdf6830b290a010db837460", "activity": "walking", "objection_fee_satoshis_due": 1000000, "winner_privkey": "L4URPwQTLbuZjhZZB3VCway3AGtMHGtxiY1JpjwSj7EKgwvF8oYa"};
+        // https://www.realitykeys.com/api/v1/runkeeper/243/?accept_terms_of_service=current
+        var no_fact = {"no_pubkey": "0389688a084ff6f83c9ed3c91236e0f46d060cef32da23dfc6fc147fde6af9ca10", "user_profile": "edochan", "settlement_date": "2014-09-23", "objection_period_secs": 604800, "human_resolution_scheduled_datetime": null, "measurement": "total_distance", "evaluation_method": "ge", "is_user_authenticated": true, "objection_fee_satoshis_paid": 0, "machine_resolution_scheduled_datetime": "2014-09-23 00:00:00", "user_id": "29908850", "goal": "4000", "created_datetime": "2014-07-19 03:34:22", "winner": "No", "value": "4000", "id": 243, "source": "runkeeper", "yes_pubkey": "03d93547f38370b35471a8ee463b4245d6b1282a0feccce8e149c4ada76d32df1a", "activity": "running", "objection_fee_satoshis_due": 1000000, "user_name": "edochan", "winner_privkey": "L3MRgBTuEtfvEpwb4CcGtDm4s79fDR8UK1AhVYcDdRL4pRpsy686"};
 
         // https://www.realitykeys.com/api/v1/runkeeper/252/?accept_terms_of_service=current
-        var no_fact = {"no_pubkey": "02c5671e3ec059bd200665d227e99e3f3f0f28ecdf848c4bfb5de408e5def8300a", "settlement_date": "2014-07-23", "objection_period_secs": 86400, "human_resolution_scheduled_datetime": null, "user_name": "edochan", "user_profile": "edochan", "user_id": "29908850", "measurement": "cumulative_distance", "evaluation_method": "ge", "is_user_authenticated": true, "objection_fee_satoshis_paid": 0, "machine_resolution_scheduled_datetime": "2014-07-23 00:00:00", "goal": "12300", "created_datetime": "2014-07-23 09:11:05", "winner": "No", "value": "12300", "id": 252, "source": "runkeeper", "yes_pubkey": "02f70abb10f616d102b67ea0cc5f4887df642771c4dce5ba838ac88e465210dd64", "activity": "walking", "objection_fee_satoshis_due": 1000000, "winner_privkey": "L3iW65EC59fvWjsRz2TNPjBtueyBt2mkGE59LdG5nAf463YTRD45"}
+        var yes_fact = {"no_pubkey": "0309fee1726ed80f80869951de4b77115b1be64b77317c80b1f5f09cc9a78c978d", "user_profile": "edochan", "settlement_date": "2014-07-19", "objection_period_secs": 86400, "human_resolution_scheduled_datetime": null, "measurement": "cumulative_distance", "evaluation_method": "ge", "is_user_authenticated": true, "objection_fee_satoshis_paid": 0, "machine_resolution_scheduled_datetime": "2014-07-19 00:00:00", "user_id": "29908850", "goal": "100", "created_datetime": "2014-07-19 03:54:33", "winner": "Yes", "value": "100", "id": 244, "source": "runkeeper", "yes_pubkey": "0309992b4062fc9cb29e681fef394f88182a49e31a6a859a10be38664603a43fe7", "activity": "walking", "objection_fee_satoshis_due": 1000000, "user_name": "edochan", "winner_privkey": "L3k6Qy7SYXSLs93Bcf7YfQJsjFeDy4oLgFuMtstfwZkFSAckEdwf"};
 
 
-
-
-        // testnet contract for fact 251 (yes)
-        var c251t = yes_fact; // NB This will have more fields filled than we would have in reality
-        c251t['is_testnet'] = true;
-        c251t['yes_user_pubkey'] = yes_user_pubkey;
-        c251t['no_user_pubkey'] = no_user_pubkey;
-        c251t['is_testnet'] = true;
+        // testnet contract for fact 243 (yes)
+        var c243t = no_fact; // NB This will have more fields filled than we would have in reality
+        c243t['yes_user_pubkey'] = yes_user_pubkey;
+        c243t['no_user_pubkey'] = no_user_pubkey;
+        c243t['network'] = 'testnet';
 
         // old method with only the two groups and no user+user unlocking
-        //var c251t_fund_address = p2sh_address(c251t, false);
-        //assert('2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU' == c251t_fund_address, 'fact 251 gives us the expected funding address');
+        //var c243t_fund_address = p2sh_address(c243t, false);
+        //assert('2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU' == c243t_fund_address, 'fact 243 gives us the expected funding address');
 
-        c251t_fund_address = p2sh_address(c251t);
-        assert('2MxivUngEKfZVUmCv3b9ff4qmoDhRHTENcn' == c251t_fund_address, 'fact 251 gives us the expected funding address with the extra user-user branch');
+        c243t_fund_address = p2sh_address(c243t);
+        assert('2N18JYb5iuyjHqi3c8fwGQwVzntvYTH99Mk' == c243t_fund_address, 'fact 243 gives us the expected funding address with the extra user-user branch on testnet');
 
         // mainnet version of the same thing
-        var c251m = c251t;
-        c251m['is_testnet'] = false;
-        assert(p2sh_address(c251m) != c251t_fund_address, 'Without testnet flag p2sh address is different to testnet version');
-
-        // These will be actual testnet transactions, but once we have run the test once they will have been spent
-        var funded1 = 0.01;
-        var funded2 = 0.02;
-        var fund_txid_1 = 'deebc555268396f24d46575b56df839316525796497809b476e29d17c1e2c0ef'; 
-        var fund_txid_2 = 'aaf895c26bd32b4fb575b878ad51b7d189edfdd425f95a8026c24de8d93b98c1';
-
-        // Normally we would pull the balance from blockr.
+        var c243m = c243t;
+        c243m['network'] = 'livenet';
+        var c243m_fund_address = p2sh_address(c243m)
+        c243m['address'] = c243m_fund_address;
+        assert(c243m_fund_address != c243t_fund_address, 'Without testnet flag p2sh address is different to testnet version');
+        assert('39a6Ur9hJXDwdvR4TYKPnzWjaYiNfZ4Zxp' == c243m_fund_address, 'fact 243 gives us the expected funding address with the extra user-user branch on livenet');
+        // Normally we would pull the balance from blockchain.info.
         // We then use it to populate the balance field of the contract
-        c251t['balance'] = 0.03;
+        //c243t['balance'] = ;
 
+        var demo_unspent_blockchain = {
+            "unspent_outputs":[
+                {
+                    "tx_hash":"0343d77440f7989eb828f884bd2d9d559c9525ea659eb27951525a2269225350",
+                    "tx_hash_big_endian":"50532269225a525179b29e65ea25959c559d2dbd84f828b89e98f74074d74303",
+                    "tx_index":69269456,
+                    "tx_output_n": 0,   
+                    "script":"a9145671e6049b22779f46a70a4ab6d927963f1faf3787",
+                    "value": 40000,
+                    "value_hex": "009c40",
+                    "confirmations":0
+                }
+              
+            ]
+        };
+
+        var demo_unspent_txes = format_unspent_response(demo_unspent_blockchain, 'blockchain', c243m_fund_address);
+        assert(demo_unspent_txes['unspent_outputs'].length == 1, 'demo_unspent_txes has 1 entry');
+        assert(demo_unspent_txes['balance'] == 40000, 'demo_unspent_txes has the appropriate balance');
+        var c243m_tx_hex = hex_for_claim_execution(cash_out_address, no_user_privkey, c243m['winner_privkey'], demo_unspent_txes['unspent_outputs'][0], c243m, 'livenet');
+        return;
+        var c243t_tx_hex_2 = hex_for_claim_execution(cash_out_address, yes_user_privkey, c243t['winner_privkey'], demo_unspent_txes['unspent_outputs'][0], c243t, 'testnet');
+        assert(c243t_tx_hex != c243t_tx_hex_2, 'Hex should be different each time, due to randomness in signatures');
+
+        var c243t_tx = tx_for_claim_execution(cash_out_address, yes_user_privkey, c243t['winner_privkey'], demo_unspent_txes[0], c243t);
+        var chunks = c243t_tx['ins'][0].getScript().chunks;
+        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
+        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
+        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
+        assert(81 == chunks[3].toString(), 'after sigs we have a 1');
+        assert(81 == chunks[4].toString(), 'after sigs we have another 1 for the first branch');
+        assert(chunks[5].toString('hex').length > 100, 'ends with a big old redeem script');
+        
+        /*
+        TODO: Work out how to propagate the errors for this
+        try {
+            var c243t_tx_hex_wrong = hex_for_claim_execution(cash_out_address, no_user_privkey, c243t['winner_privkey'], demo_unspent_txes[0], c243t);
+console.log(c243t_tx_hex_wrong);
+            assert(false, 'Trying to claim with the wrong key combination should raise an error');
+        } catch( err) {
+            assert(true, 'Trying to claim with the wrong key combination should raise an error');
+        }
+        */
+
+
+        var c243t_tx_user = tx_for_claim_execution(cash_out_address, yes_user_privkey, no_user_privkey, demo_unspent_txes[0], c243t);
+        var chunks = c243t_tx_user['ins'][0].getScript().chunks;
+        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
+        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
+        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
+        assert(0 == chunks[3].toString(), 'after sigs we have a noop');
+        assert(chunks[4].toString('hex').length > 100, 'ends with a big old redeem script');
+
+
+
+        // testnet contract for fact 243 (yes)
+        var c252t = no_fact; // NB This will have more fields filled than we would have in reality
+        c252t['is_testnet'] = true;
+        c252t['yes_user_pubkey'] = yes_user_pubkey;
+        c252t['no_user_pubkey'] = no_user_pubkey;
+        c252t['is_testnet'] = true;
+
+        // old method with only the two groups and no user+user unlocking
+        //var c252t_fund_address = p2sh_address(c252t, false);
+        //assert('2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU' == c252t_fund_address, 'fact 252 gives us the expected funding address');
+
+        c252t_fund_address = p2sh_address(c252t);
+        assert('2Mtr3ge4kcA8rffWQdwfkcEYfuzyZJ956A2' == c252t_fund_address, 'fact 252 gives us the expected funding address with the extra user-user branch');
+        assert(c243t_fund_address != c252t_fund_address, 'Yes fact produces a different funding address to a different no fact');
+
+        // mainnet version of the same thing
+        var c252t_tx_hex = hex_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
+        var c252t_tx_hex_2 = hex_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
+        assert(c252t_tx_hex != c252t_tx_hex_2, 'Hex should be different each time, due to randomness in signatures');
+
+        var c252t_tx = tx_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
+        var chunks = c252t_tx['ins'][0].getScript().chunks;
+        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
+        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
+        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
+        assert(0 == chunks[3].toString(), 'after sigs we have a 1');
+        assert(81 == chunks[4].toString(), 'after sigs we have a 0 for the first branch');
+        assert(chunks[5].toString('hex').length > 100, 'ends with a big old redeem script');
+ 
+        //console.log("Made hex:");
+        //console.log(c243t_tx_hex);
+
+        // Sending this resulted in:
+        // txid: '5b834f6c1d750f60deec7c83da918832d55f9c290429c838df734f9ed2a32a3c'
+        // raw tx: '0100000001efc0e2c1179de276b4097849965752169383df565b57464df296832655c5ebde00000000fd2501004730440220795bf7bc4529f2ffcdd625d9eb2e3769b9ce3eee7cca2b0d6c868bbc1ea34dd502206dc62551a96f9c43f4e0eaa288db65a27efd9dc529c45b2d2485f1966ce205ca01473044022003fcb9e1eeac11fd4c1a2696cdcdc2f1f1e81e1501cc5d56113d18888986df800220290d43ce410bd445b3ea25916eb4799ed702dfb9394bf954442d13213c6523c601514c9163522103b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad32103ef92fd0593af4e10de665d1b25703a76af84349becdf6830b290a010db83746052ae6752210213e0a3f741cd305571366ee3d30bfd819bd95b6f0d8dea0ee13a10dc3f6cf4e62103ead85d26a8339abffabe420a5cc23d9a12a0d005a7d248c80c0d43cf969236e352ae68ffffffff01301b0f00000000001976a9147906f703d0774e8f4b2fb0b716b6352e86687dfc88ac00000000'
+
+    }
+
+    function test_format_unspent_response() {
         var demo_unspent_blockr = {
             "status": "success",
             "data": {
@@ -221,89 +310,101 @@ return;
             "code": 200,
             "message": ""
         };
-        var demo_unspent_txes = demo_unspent_blockr['data']['unspent'];
+        var data = format_unspent_response(demo_unspent_blockr, 'blockr', '2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU');
+        console.log(data);
+        assert(data['balance'] == (0.01000000 + 0.02000000) * 100000000, 'balance is returned per address in satoshis' );
+        assert(data['unspent_outputs'].length == 2, 'right number of outputs per address');
+        assert(data['unspent_outputs'][0]['tx_hash_big_endian'] == "deebc555268396f24d46575b56df839316525796497809b476e29d17c1e2c0ef", 'txid is called tx_hash_big_endian');
+        assert(data['unspent_outputs'][0]['value'] == (0.01*100000000), 'amount is returned in satoshis');
+        assert(data['unspent_outputs'][0]['address'] == '2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU', 'address is supplied as passed in');
 
-        var c251t_tx_hex = hex_for_claim_execution(cash_out_address, yes_user_privkey, c251t['winner_privkey'], demo_unspent_txes[0], c251t);
-        var c251t_tx_hex_2 = hex_for_claim_execution(cash_out_address, yes_user_privkey, c251t['winner_privkey'], demo_unspent_txes[0], c251t);
-        assert(c251t_tx_hex != c251t_tx_hex_2, 'Hex should be different each time, due to randomness in signatures');
-
-        var c251t_tx = tx_for_claim_execution(cash_out_address, yes_user_privkey, c251t['winner_privkey'], demo_unspent_txes[0], c251t);
-        var chunks = c251t_tx['ins'][0].getScript().chunks;
-        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
-        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(81 == chunks[3].toString(), 'after sigs we have a 1');
-        assert(81 == chunks[4].toString(), 'after sigs we have another 1 for the first branch');
-        assert(chunks[5].toString('hex').length > 100, 'ends with a big old redeem script');
-        
-        /*
-        TODO: Work out how to propagate the errors for this
-        try {
-            var c251t_tx_hex_wrong = hex_for_claim_execution(cash_out_address, no_user_privkey, c251t['winner_privkey'], demo_unspent_txes[0], c251t);
-console.log(c251t_tx_hex_wrong);
-            assert(false, 'Trying to claim with the wrong key combination should raise an error');
-        } catch( err) {
-            assert(true, 'Trying to claim with the wrong key combination should raise an error');
-        }
-        */
-
-
-        var c251t_tx_user = tx_for_claim_execution(cash_out_address, yes_user_privkey, no_user_privkey, demo_unspent_txes[0], c251t);
-        var chunks = c251t_tx_user['ins'][0].getScript().chunks;
-        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
-        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(0 == chunks[3].toString(), 'after sigs we have a noop');
-        assert(chunks[4].toString('hex').length > 100, 'ends with a big old redeem script');
-
-
-
-        // testnet contract for fact 251 (yes)
-        var c252t = no_fact; // NB This will have more fields filled than we would have in reality
-        c252t['is_testnet'] = true;
-        c252t['yes_user_pubkey'] = yes_user_pubkey;
-        c252t['no_user_pubkey'] = no_user_pubkey;
-        c252t['is_testnet'] = true;
-
-        // old method with only the two groups and no user+user unlocking
-        //var c252t_fund_address = p2sh_address(c252t, false);
-        //assert('2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU' == c252t_fund_address, 'fact 252 gives us the expected funding address');
-
-        c252t_fund_address = p2sh_address(c252t);
-        assert('2Mtr3ge4kcA8rffWQdwfkcEYfuzyZJ956A2' == c252t_fund_address, 'fact 252 gives us the expected funding address with the extra user-user branch');
-        assert(c251t_fund_address != c252t_fund_address, 'Yes fact produces a different funding address to a different no fact');
-
-        // mainnet version of the same thing
-        var c252t_tx_hex = hex_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
-        var c252t_tx_hex_2 = hex_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
-        assert(c252t_tx_hex != c252t_tx_hex_2, 'Hex should be different each time, due to randomness in signatures');
-
-        var c252t_tx = tx_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
-        var chunks = c252t_tx['ins'][0].getScript().chunks;
-        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
-        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(0 == chunks[3].toString(), 'after sigs we have a 1');
-        assert(81 == chunks[4].toString(), 'after sigs we have a 0 for the first branch');
-        assert(chunks[5].toString('hex').length > 100, 'ends with a big old redeem script');
- 
-
-
-
-
-
-
-        //console.log("Made hex:");
-        //console.log(c251t_tx_hex);
-
-        // Sending this resulted in:
-        // txid: '5b834f6c1d750f60deec7c83da918832d55f9c290429c838df734f9ed2a32a3c'
-        // raw tx: '0100000001efc0e2c1179de276b4097849965752169383df565b57464df296832655c5ebde00000000fd2501004730440220795bf7bc4529f2ffcdd625d9eb2e3769b9ce3eee7cca2b0d6c868bbc1ea34dd502206dc62551a96f9c43f4e0eaa288db65a27efd9dc529c45b2d2485f1966ce205ca01473044022003fcb9e1eeac11fd4c1a2696cdcdc2f1f1e81e1501cc5d56113d18888986df800220290d43ce410bd445b3ea25916eb4799ed702dfb9394bf954442d13213c6523c601514c9163522103b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad32103ef92fd0593af4e10de665d1b25703a76af84349becdf6830b290a010db83746052ae6752210213e0a3f741cd305571366ee3d30bfd819bd95b6f0d8dea0ee13a10dc3f6cf4e62103ead85d26a8339abffabe420a5cc23d9a12a0d005a7d248c80c0d43cf969236e352ae68ffffffff01301b0f00000000001976a9147906f703d0774e8f4b2fb0b716b6352e86687dfc88ac00000000'
+        var demo_unspent_blockchain = {
+                "unspent_outputs":[
+                    {
+                        "tx_hash":"330d766892b258ba0cf413088b5c2991d6216724b52ba28a3feac3564668b791",
+                        "tx_hash_big_endian":"91b7684656c3ea3f8aa22bb5246721d691295c8b0813f40cba58b29268760d33",
+                        "tx_index":68669031,
+                        "tx_output_n": 1,   
+                        "script":"a9143b4d47a33bb98347e6e7f200c64cbab64d08576687",
+                        "value": 20000,
+                        "value_hex": "4e20",
+                        "confirmations":713
+                    },
+                    {
+                        "tx_hash":"a03facd648062b60c2855ba1b8196d38297c213f7d3753e507e126bb67bed6fb",
+                        "tx_hash_big_endian":"fbd6be67bb26e107e553377d3f217c29386d19b8a15b85c2602b0648d6ac3fa0",
+                        "tx_index":69008291,
+                        "tx_output_n": 0,   
+                        "script":"76a9148a462b671791d0bfbd8fd0d3987f652258d06dd088ac",
+                        "value": 180000,
+                        "value_hex": "02bf20",
+                        "confirmations":83
+                    }
+                  
+                ]
+            };
+        var data = format_unspent_response(demo_unspent_blockchain, 'blockchain', '391ByYRP3ZGtizQt3XKc96T8xxLvzWj5Ec');
+        assert(data['unspent_outputs'].length == 2, 'right number of outputs per address');
+        assert(data['unspent_outputs'][0]['tx_hash_big_endian'] == "91b7684656c3ea3f8aa22bb5246721d691295c8b0813f40cba58b29268760d33", 'txid is called tx_hash_big_endian');
+        assert(data['unspent_outputs'][0]['value'] == 20000, 'amount is returned in satoshis');
+        assert(data['balance'] == 200000, 'balance is provided and in satoshis');
 
     }
 
+    /*
+    We use blockr for testnet and blockchain.info for livenet.
+    These return unspent outputs in different formats, reformat for what we need
+    */
+    function format_unspent_response(response, format, addr) {
+
+        var ret = {
+                'balance': 0,
+                'unspent_outputs': []
+        };
+        if (format == 'blockr') {
+            var data = response['data'];
+
+            // Unspent with only one argument returns an object
+            if (data.hasOwnProperty('address')) {
+                data = [data];
+            }
+            for(var i=0; i<data.length; i++) {
+                for (var j=0; j<data[i]['unspent'].length; j++) {
+                    var o_in = data[i]['unspent'][j];
+                    var o_out = {
+                        'tx_hash_big_endian': o_in['tx'],
+                        'value': o_in['amount'] * 100000000,
+                        'tx_output_n': o_in['n'],
+                        'script': o_in['script'],
+                        'address': addr
+                    }
+                    ret['unspent_outputs'].push(o_out);
+                    ret['balance'] = ret['balance'] + o_out['value'];
+                }
+            }
+        } else {
+            var data = response['unspent_outputs'];
+            for(var i=0; i<data.length; i++) {
+                var o_in = data[i];
+                var o_out = {
+                    'tx_hash_big_endian': o_in['tx_hash_big_endian'],
+                    'value': o_in['value'],
+                    'tx_output_n': o_in['tx_output_n'],
+                    'script': o_in['script'],
+                    'address': addr
+                }
+                ret['unspent_outputs'].push(o_out);
+                ret['balance'] = ret['balance'] + o_out['value'];
+            }
+        }
+        return ret; 
+
+    }
+
+
     function run_tests() {
 
+        test_format_unspent_response();
         test_format_sanitization();
         test_hash_to_contract();
         test_mnemonic_handling();
@@ -817,209 +918,6 @@ console.log("import import_hash "+import_hash);
         }
     }
 
-    function display_single_contract(c) {
-
-        //$('body').removeClass('for-list').addClass('for-single');
-        $('#section3').removeClass('populated').addClass('populating');
-
-        $('#goal-view-reality-key-link').attr('href', '#');
-        $('#goal-view-reality-key-link-container').hide();
-        $('#goal-view-balance').text('');
-        $('#goal-view-balance-container').hide();
-
-        // Show a loading section
-        $('.view-goal-form-loading').show();
-        $('.view-goal-form-title').hide();
-
-        // Hide the form part until we load it
-        $('.goal-view-section').find('.completed-form-control').css('visibility', 'hidden');
-
-        // ...but show the overall section so we can see it loading
-        $('.goal-view-section').css('visibility', 'visible');
-
-        c['charity_display'] = charity_display_for_pubkey(c['no_user_pubkey']);
-
-        var wins_on = wins_on_for_stored_keys(c);
-        if (wins_on == 'Yes') {
-            $('.goal-view-section').addClass('wins-on-yes').removeClass('wins-on-no').removeClass('wins-on-none');
-        } else if (wins_on == 'No') {
-            $('.goal-view-section').addClass('wins-on-no').removeClass('wins-on-yes').removeClass('wins-on-none');
-        }  else {
-            $('.goal-view-section').addClass('wins-on-none').removeClass('wins-on-yes').removeClass('wins-on-no');
-        }
-
-
-        $('#view-goal-cancel').unbind('click').click( function() {
-            //$('body').removeClass('for-single').addClass('for-list');
-            return true;
-        });
-
-
-        // Start populated with the data we have, fetch the rest
-        data = c;
-
-        // Make sure we have at least one of the keys
-        url = oracle_api_base + '/fact/' + c['id'] + '/' + oracle_param_string;
-        console.log("fetching reality keys data:");
-        console.log(url);
-        $.ajax({
-            url: url, 
-            type: 'GET',
-            dataType: 'json', 
-            success: function(data) {
-
-                data['wins_on'] = wins_on;
-                data['charity_display'] = charity_display_for_pubkey(c['no_user_pubkey']);
-                data['yes_user_pubkey'] = c['yes_user_pubkey'];
-                data['no_user_pubkey'] = c['no_user_pubkey'];
-                data['is_testnet'] = c['is_testnet'];
-                //display_contract(data);
-
-                data['address'] = p2sh_address(data);
-
-                var link_addr = data['is_testnet'] ? 'https://tbtc.blockr.io/address/info/' : 'https://blockchain.info/address/';
-                link_addr += format_address(data['address']);
-                $('#view-contract-payable-address').text(data['address']).attr('href', link_addr);
-
-                /*
-                $('#view-user').text(data['user']);
-                $('#view-activity').text(data['activity']);
-                $('#view-measurement').text(data['measurement']);
-                $('#view-goal').text(data['goal']);
-                $('#view-settlement_date').text(data['settlement_date']);
-                $('#view-charity-display-name').text(data['charity_display']);
-                $('#view-charity-public-key').text(data['no_user_pubkey']);
-                $('#view-user-public-key').text(data['yes_user_pubkey']);
-                */
-
-                $('#goal-view-reality-key-link').attr('href', oracle_view_base + c['id']).show();
-                $('#goal-view-reality-key-link-container').show();
-
-                $('#view-goal-store').unbind('click').click( function() {
-                    store_contract(data);
-                    reflect_contract_added(data);
-                });
-
-                if (is_contract_stored(data['address'])) {
-                    $('#view-goal-store').hide();
-                } else {
-                    $('#view-goal-store').show();
-                }
-                var contract_text = {
-                    'activity_verb': activity_verb(data['activity']),
-                    'goal_text': data['goal'] + ' meters',
-                    'settlement_date': data['settlement_date'],
-                    'charity_display': charity_display_for_pubkey(c['no_user_pubkey']),
-                    'user': data['user_profile']
-                }
-                var txt = formatted_title_start(contract_text, false, true) + formatted_title_end(contract_text, false, true);
-                txt = txt + ' ' + sharing_url(data, true);
-                $('#twitter-button').attr('href', 'http://twitter.com/home?status=' + encodeURIComponent(txt));
-
-                var section_title = data['user'] + ' to complete ' + data['activity'] + ' ' + data['goal'] + 'm by ' + formatted_date(data['settlement_date']);
-                section_title = section_title.charAt(0).toUpperCase()+section_title.substring(1); // capitalize first letter
-
-                // Should already be visible but do it again in case something happened out of sequence
-                $('.goal-view-section').css('visibility', 'visible');
-                $('.goal-view-section').find('.completed-form-control').css('visibility', 'visible');
-
-                // Hide the loading text 
-                $('.view-goal-form-loading').hide();
-                $('.view-goal-form-title').text(section_title);
-                $('.view-goal-form-title').show();
-
-                $('.goal-view-section').find('form').css('visibility', 'visible');
-
-                var winner = data['winner'];
-                var is_winner_decided = (winner != null);
-
-                var i_won = (winner == wins_on);
-                if (is_winner_decided) {
-                    $('.goal-view-section').addClass('decided').removeClass('undecided');
-                    if (i_won) {
-                        $('.goal-view-section').addClass('i-won').removeClass('i-lost');
-                    } else {
-                        $('.goal-view-section').addClass('i-lost').removeClass('i-won');
-                    }
-                    if (data['winner_privkey']) {
-                        $('.goal-view-section').addClass('key-ready').removeClass('key-not-ready');
-                    } else {
-                        $('.goal-view-section').addClass('key-not-ready').removeClass('key-ready');
-                    }
-                } else {
-                    $('.goal-view-section').addClass('undecided').removeClass('decided');
-                    $('.goal-view-section').removeClass('i-lost').removeClass('i-won');
-                }
-
-                $('#section3').addClass('populated').removeClass('populating');
-
-                //$('#single-claim-button').unbind('click').text('Checking balance...');
-                // Now we have the address, we can get the balance
-                var url = c['is_testnet'] ? 'https://tbtc.blockr.io/api/v1/address/balance/'+data['address'] : 'https://btc.blockr.io/api/v1/address/balance/'+data['address']; url = url + '?confirmations=0';
-                $.ajax({
-                    url: url, 
-                    type: 'GET',
-                    dataType: 'json', 
-                    success: function(tx_data) {
-                        var balance = tx_data['data']['balance'];
-
-                        var contract_text = {
-                            'activity_verb': activity_verb(data['activity']),
-                            'goal_text': data['goal'] + ' meters',
-                            'settlement_date': data['settlement_date'],
-                            'charity_display': data['charity_display'],
-                            'user': data['user']
-                        }
-                        $('.view-contract-title-start').text(formatted_title_start(contract_text, true));
-                        $('.view-contract-title-end').text(formatted_title_end(contract_text, true));
-
-                        $('#goal-view-balance').text(balance);
-                        $('#goal-view-balance-container').show();
-                        if (balance > 0 && i_won && data['winner_privkey']) {
-                            $('#single-claim-button').unbind('click').click( function() {
-                                var url = c['is_testnet'] ? 'https://tbtc.blockr.io/api/v1/address/unspent/'+data['address'] : 'https://btc.blockr.io/api/v1/address/unspent/'+data['address'];
-                                url = url + '?confirmations=0';
-                                url = url + '&unconfirmed=1'; // unspent seems to need both of these
-                                console.log("fetching unspent:");
-                                $.ajax({
-                                    url: url, 
-                                    type: 'GET',
-                                    dataType: 'json', 
-                                    success: function(tx_data) {
-                                        var txes = tx_data['data']['unspent'];
-                                        bootbox.prompt( 'What address to do want to send your winnings to?', function(result) {
-                                            if (result !== null) {
-                                                execute_claim(result, c, txes, data['winner_privkey']);
-                                                return;
-                                            }
-                                            return;
-                                        });
-                                    },
-                                    error: function(data) {
-                                        console.log("got error from unspent");
-                                        console.log(data);
-                                    }
-                                });
-                            });
-                            console.log("removing disabled");
-                            $('#single-claim-button').prop('disabled',false);
-                        } 
-                        return;
-                    },
-                    error: function(data) {
-                        console.log("got error from fake");
-                        console.log(data);
-                    }
-                });
-            },
-            error: function(data) {
-                console.log("got error");
-                console.log(data);
-            }
-        });
-        return false;
-
-    }
 
     function eligius_cross_domain_post(data) {
 
@@ -1131,6 +1029,7 @@ console.log("import import_hash "+import_hash);
     }
 
     function hex_for_claim_execution(to_addr, priv1, priv2, tx, c, network) {
+        console.log("making hex for output", tx);
 
         var tx = tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network); 
         console.log("tx_for_claim_execution:", tx);
@@ -1143,30 +1042,20 @@ console.log("import import_hash "+import_hash);
 
     function tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network) {
 
-console.log("claim for network", network);
-        //console.log(tx);
-        var amount = tx.hasOwnProperty('value') ? tx['value'] : (tx['amount'] * 100000000); // handle blockchain and blockr formats
-        var txid;
-        if (tx.hasOwnProperty('tx_hash')) {
-            // blockchain.info gives us the txid backwards...
-            txid = txid = tx['tx_hash'].match(/.{2}/g).reverse().join("");
-            console.log("after", txid);
-        } else {
-            txid = tx['tx'];
-        }
-        var vout = tx.hasOwnProperty('tx_output_n') ? tx['tx_output_n'] : tx['n'];
+console.log("in tx_for_claim_execution", to_addr, priv1, priv2, tx, c, network);
 
         //console.log(tx);
+        var amount = tx['value'];
 
         //alert('Next step: make tx for '+n+','+txid+','+amount);
         var utxos2 = [
         {
-            address: c['address'],
-            txid: txid, // handle blockchain and blockr formats
-            vout: vout,
+            address: tx['address'],
+            txid: tx['tx_hash_big_endian'],
+            vout: tx['tx_output_n'],
             ts: 1396375187,
             scriptPubKey: tx['script'], // same for blockr and blockchain.info
-            amount: amount/100000000,
+            amount: amount / 100000000,
             confirmations: 1
         }
         ];
@@ -1182,12 +1071,15 @@ console.log("claim for network", network);
         console.log("priv2", priv2);
         console.log("amount", amount);
 
-        var fee = 20000;
+        var fee = 10000;
         var opts = {network: bitcore.networks[network], nreq:[2,2,2], pubkeys:pubkeys, fee: (fee)/100000000};
+        console.log("opts", opts);
 
         outs = [{address:to_addr, amount:((amount-fee)/100000000)}];
+        console.log("outs", outs);
         console.log("amount-fee", (amount-fee));
         //console.log("outs:");
+        console.log("c_acddress", c['address']);
         //console.log(outs);
 
         var hashMap = {};
@@ -1257,157 +1149,35 @@ console.log("claim for network", network);
 
     function append_contract_to_display(c) {
 
-        var frm = $('#claim-form');
+        var section = $('#claim-table');
 
         // The address should uniquely identify the contract, so only ever add the same address once.
-        if (frm.find( "[data-address='" + c['address'] + "']").length) {
+        if (section.find( "[data-address='" + c['address'] + "']").length) {
             return;
         }
 
-        var row = frm.find('.contract-data-template').clone().removeClass('contract-data-template').addClass('contract-data-row').attr('data-address',c['address']);
+        var row = section.find('.contract-data-template').clone().removeClass('contract-data-template').addClass('contract-data-row').attr('data-address',c['address']);
 
-        row.find('.fund-button').unbind('click').click( function() {
-            bootbox.alert('Please pay<br />'+c['address']);
-            return false;
-        });
-
-        var txt = '@bymycoins I will complete ' + c['activity'] + ' ' + c['goal'] + 'm by ' + formatted_date(c['settlement_date']) + ' or pay ' + c['charity_display'];
-        txt = txt + ' ' + sharing_url(c, true);
-        row.find('.tweet-button').attr('href', 'http://twitter.com/home?status=' + encodeURIComponent(txt));
-
-        var wins_on = wins_on_for_stored_keys(c);
-        var winner = c['winner'];
-        var is_winner_decided = (winner != null);
-
-        var i_won = (winner == wins_on);
-        if (is_winner_decided) {
-            row.addClass('decided').removeClass('undecided');
-            if (i_won) {
-                row.addClass('i-won').removeClass('i-lost');
-            } else {
-                row.addClass('i-lost').removeClass('i-won');
-            }
-            if (c['winner_privkey']) {
-                row.addClass('key-ready').removeClass('key-not-ready');
-            } else {
-                row.addClass('key-not-ready').removeClass('key-ready');
-            }
-            if (winner == 'Yes') {
-                row.addClass('winner-yes').removeClass('winner-no').removeClass('winner-undecided');
-            } else if (winner == 'No') {
-                row.addClass('winner-no').removeClass('winner-yes').removeClass('winner-undecided');
-            }
-        } else {
-            row.addClass('winner-undecided');
-            row.addClass('undecided').removeClass('decided');
-            row.removeClass('i-lost').removeClass('i-won');
-        }
-
-        if (wins_on == 'Yes') {
-            row.addClass('wins-on-yes');
-        } else if (wins_on == 'No') {
-            row.addClass('wins-on-no');
-        }
+        row.find('.our-pub-key').val(c['no_user_pubkey']);
+        row.find('.your-pub-key').val(c['yes_user_pubkey']);
+        row.find('.yes-pub-key').val(c['yes_pubkey']);
+        row.find('.no-pub-key').val(c['no_pubkey']);
+        row.find('.no-pub-key').val(c['no_pubkey']);
+        row.find('.winner-privkey').val(c['winner_privkey']);
 
         var lnk = $('<a>');
-        if (c['is_testnet']) {
-            lnk.attr('href', 'https://tbtc.blockr.io/address/info/' + format_address(c['address']));
-            lnk.text(c['balance'] + ' TBTC');
-        } else {
-            lnk.attr('href', 'https://blockchain.info/address/' + format_address(c['address']));
-            lnk.text(c['balance'] + ' BTC');
-        }
+        lnk.attr('href', 'https://blockchain.info/address/' + format_address(c['address']));
+        lnk.text(satoshis_to_display_format(c['balance']) + ' BTC');
 
         row.find( "[data-type='funds']" ).html(lnk);
-        row.find( "[data-type='user']" ).find('.runkeeper-profile-link').attr('href', runkeeper_url(c['user_profile'])).text(c['user_name']);
-        row.find( "[data-type='activity']" ).text(c['activity']);
-        row.find( "[data-type='measurement']" ).text(c['measurement']);
-        row.find( "[data-type='goal']" ).text(c['goal'] + ' meters');
-        row.find( "[data-type='settlement_date']" ).text(c['settlement_date']);
-
-        var charity_display = c['charity_display'];
-        if (charity_display == '') {
-            charity_display = c['no_user_pubkey'];
-        }
-        row.find( "[data-type='charity-display']" ).text(charity_display);
-
-        if (c['balance'] > 0) {
-            row.addClass('funded');
-            row.find('.claim-button').click( function() {
-                //alert('claiming');
-                fact_id = c['id'];
-                url = oracle_api_base + '/fact/' + fact_id + '/' + oracle_param_string;
-                $.ajax({
-                    url: url, 
-                    type: 'GET',
-                    dataType: 'json', 
-                    success: function(data) {
-                        if (!data.winner) {
-                            alert('Sorry, winner not announced yet');
-                            return;
-                        }
-
-                        var winner = data['winner'];
-                        var winner_privkey_wif = data['winner_privkey'];
-                        if (winner_privkey_wif == null) {
-                            alert('Sorry, the key has not been published yet. Please try again soon.');
-                        }
-                        // This will be in WIF format for bitcoin livenet.
-                        // We'll turn this into a network-neutral hex private key.
-                        var w = new bitcore.WalletKey({
-                            network: bitcore.networks.livenet,
-                        });
-                        w.fromObj({ priv: winner_privkey_wif });
-                        var winner_privkey = w.privKey.private.toString('hex');
-                        console.log(c); 
-                        var url = c['is_testnet'] ? 'https://tbtc.blockr.io/api/v1/address/unspent/'+c['address'] : 'https://btc.blockr.io/api/v1/address/unspent/'+c['address'];
-                        url = url + '?confirmations=0';
-                        url = url + '&unconfirmed=1'; // unspent seems to need both of these
-                        $.ajax({
-                            url: url, 
-                            type: 'GET',
-                            dataType: 'json', 
-                            success: function(tx_data) {
-                                var txes = tx_data['data']['unspent'];
-                                bootbox.prompt( 'What address to do want to send your winnings to?', function(result) {
-                                    if (result === null) {
-                                        console.log("no result");
-                                        return;
-                                    }
-                                    console.log("executing for "+result);
-                                    execute_claim(result, c, txes, winner_privkey);
-                                    return;
-                                });
-                                return;
-                            },
-                            error: function(data) {
-                                console.log("got error from fake");
-                                console.log(data);
-                            }
-                        });
-                        return;
-                    },
-                    error: function(data) {
-                        console.log("got error from fake");
-                        console.log(data);
-                    }
-                });
-
-                /*
-                alert('claiming 2');
-                */
-                return false;
-            });
-        
-        } else {
-            row.addClass('unfunded');
-        }
+        //row.find( "[data-type='settlement_date']" ).text(c['settlement_date']);
 
         row.insertAfter('.contract-data-template:last');
-        row.show();
 
-        $('#claim-form').find('tbody').sortable();
-        //$('#claim-form').sortable();
+        // Pass the row in twice because it contains both the address setup form fields and the claim form fields
+        setup_claim_form(row, row);
+
+        row.show();
 
     }
 
@@ -1491,7 +1261,7 @@ console.log("claim for network", network);
         if (!data['no_user_pubkey']) return null;
         if (!data['yes_pubkey']) return null;
         if (!data['no_pubkey']) return null;
-
+console.log("p2sh_address", data);
         var script = redeem_script(data);
         var addr = bitcore.Address.fromScript(script, data['network']);
 
@@ -1788,14 +1558,14 @@ console.log("claim for network", network);
         if ($('body').hasClass('claim-page')) {
             return;
         }
-
+        var network = $('#network').val();
         var c = {
             'yes_user_pubkey': $('#our-pub-key').val(),
             'no_user_pubkey': $('#your-pub-key').val(),
             'yes_pubkey': $('#yes-pub-key').val(),
             'no_pubkey': $('#no-pub-key').val(),
             'id': $('#reality-key-id').val(),
-            'network': $('#network').val(),
+            'network': network,
             'site_resource_id': $('#site-resource-id').val()
         };
         console.log('c:',c);
@@ -1870,16 +1640,125 @@ console.log("claim for network", network);
 
     function setup_claim_multiple_form(frm) {
 
+        var our_pub_key = $('#our-pub-key').val();
+        if (our_pub_key == null) {
+            console.log('cannot set up claim form, our pub key not found');
+            return;
+        }
+
         var site_resource_id = $('#site-resource-id').val();
+        var network = $('#network').val();
         fetch_contract_data_for_site_resource_id(
             site_resource_id,
             function(data) {
+                var reality_keys_to_addresses = {};
                 var addresses = [];
                 for(var i=0; i < data['data'].length; i++) {
-                    console.log('item', data['data'][i]);
-                    addresses.push(data['data'][i]['address']); 
+                    var c = data['data'][i];
+                    var a = c['address'];
+                    var rkid = c['realitykeys_id'] + '';
+                    if (!reality_keys_to_addresses[rkid]) {
+                        reality_keys_to_addresses[rkid] = {};
+                    }
+                    addresses.push(a);
+                    reality_keys_to_addresses[rkid][a] = {
+                        'yes_user_pubkey': c['yes_user_pubkey'],
+                        'no_user_pubkey': c['no_user_pubkey']
+                    };
                 }
                 console.log("got addresses:",addresses);
+                var url_info = unspent_url_info( addresses, network );
+                var url = url_info['url'];
+                var response_format = url_info['response_format'];
+
+                $('body').addClass('fetching-balance-for-multiple-claim');
+                    
+                if ($('#network').val() != 'livenet') {
+                    bootbox.alert('Multiple claim does not work on testnet');
+                    return false;
+                }
+                var url = 'https://blockchain.info/multiaddr?cors=true&active=' + addresses.join('|');
+                $.ajax({
+                    url: url, 
+                    type: 'GET',
+                    dataType: 'json'
+                }).done( function(response) {
+                    var addrs = response['addresses'];
+                    var addr_to_balance = {}
+                    var total_paid = 0;
+
+                    // Go through the addresses in the DB and throw away anything without a payment
+                    // addr_to_balance will then contain only funded addresses
+                    // TODO: We probably want to display spent addresses somewhere...
+                    for (var i=0; i<addrs.length; i++) {
+                        var a = addrs[i];
+                        if (a['final_balance'] == 0) {
+                            continue;
+                        }
+                        var ad = a['address'];
+                        addr_to_balance[ad] = a['final_balance'];
+                        total_paid = total_paid + a['final_balance'];
+                    }
+                    console.log(addr_to_balance);
+                    $('#address-balance').html(total_paid/100000000);
+
+                    if (total_paid > 0) {
+                        funded_addresses_param = Object.keys(reality_keys_to_addresses).join(',');
+                        $.ajax({
+                            url: 'https://www.realitykeys.com/api/v1/facts/'+funded_addresses_param+'/?accept_terms_of_service=current',
+                            type: 'GET',
+                            dataType: 'json'
+                        }).done( function(response_data) {
+                            var waiting_for_refund_balance = 0;
+                            var waiting_for_settlement_balance = 0;
+                            var available_to_claim_balance = 0;
+                            for (var i=0; i<response_data.length; i++) {
+                                var rk = response_data[i];
+                                var rkid = rk['id'];
+                                var rk_addresses = reality_keys_to_addresses[rkid];
+                                for( rk_addr in rk_addresses) {
+                                    if (!rk_addresses.hasOwnProperty(rk_addr)) {
+                                        continue;
+                                    }
+                                    rk['address'] = rk_addr;
+                                    rk['balance'] = addr_to_balance[rk_addr];
+                                    rk['yes_user_pubkey'] = rk_addresses[rk_addr]['yes_user_pubkey'];
+                                    rk['no_user_pubkey'] = rk_addresses[rk_addr]['no_user_pubkey'];
+                                    var i_won = (rk['winner'] == 'Yes' && rk['yes_user_pubkey'] == our_pub_key) || (rk['winner'] == 'No' && rk['no_user_pubkey'] == our_pub_key);
+                                    if ( (rk['winner'] == 'Yes') || (rk['winner'] == 'No') ) {
+                                        if (i_won) {
+                                            console.log('i won');
+                                            console.log(rk);
+                                            append_contract_to_display(rk);
+                                            available_to_claim_balance = available_to_claim_balance + rk['balance'];
+                                        } else {
+                                            console.log('i lost');
+                                            console.log(rk);
+                                            waiting_for_refund_balance = waiting_for_refund_balance + rk['balance'];
+                                        } 
+                                    } else {
+                                        waiting_for_settlement_balance = waiting_for_settlement_balance + rk['balance'];
+                                    }
+                                        
+                                                                }
+                            }
+                            $('#available-to-claim-balance').text(satoshis_to_display_format(available_to_claim_balance));
+                            $('#waiting-for-settlement-balance').text(satoshis_to_display_format(waiting_for_settlement_balance));
+                            $('#waiting-for-refund-balance').text(satoshis_to_display_format(waiting_for_refund_balance));
+                        }).fail( function(response) {
+                        }).always( function(response) {
+                        });
+                    }
+
+                }).fail( function(data) {
+                    console.log(data.responseText);
+                    // With blockchain over 
+                    $('#address-balance').html('0');
+                }).always( function() {
+                    $('body').removeClass('fetching-balance-for-multiple-claim');
+                });
+                return false;
+
             },
             function(data) {
                 alert('ng');
@@ -1916,6 +1795,7 @@ console.log("claim for network", network);
     }
 
     function unspent_url_info(addr, network) {
+
         var response_format = 'blockr';
         if (network == 'livenet') {
             if (query_livenet == 'blockchain') {
@@ -1935,11 +1815,13 @@ console.log("claim for network", network);
             'url': url,
             'response_format': response_format
         }
+
     }
 
     function show_address_balance(addr, network) {
 
         $('body').addClass('fetching-balance');
+        console.log("in show_address_balance", addr, network);
 
         var url_info = unspent_url_info(addr, network);;
         var url = url_info['url'];
@@ -1952,26 +1834,10 @@ console.log("claim for network", network);
             url: url, 
             type: 'GET',
             dataType: 'json'
-        }).done( function(data) {
-            var balance = 0;
-            if (response_format == 'blockchain') {
-                var unspents = data['unspent_outputs'];
-                console.log("unspent_outputs:", unspents);
-                for (u in unspents) {
-                    if (unspents.hasOwnProperty(u)) {
-                        u_obj = unspents[u];
-                        console.log("got unspent", u_obj);
-                        if (u_obj['value']) {
-                            balance = balance + u_obj['value'];
-                            console.log(balance);
-                        }
-                    }
-                }
-                balance = balance / 100000000;
-            } else {
-                balance = data['data']['balance'];
-            }
-            $('#address-balance').html(balance);
+        }).done( function(response) {
+            var unspent_data = format_unspent_response(response, response_format, addr);
+            balance = satoshis_to_display_format(unspent_data['balance']);
+            $('#address-balance').text(balance);
         }).fail( function(data) {
             console.log(data.responseText);
             // With blockchain over 
@@ -1983,27 +1849,41 @@ console.log("claim for network", network);
 
     }
 
-    function setup_claim_form(frm) {
+    /*
+    Attaches event handlers allowing claims.
+    claim_frm should contain the address to withdraw to.
+    address_frm should contain the keys needed to make the redeem script
 
-        $('#claim-from-address').unbind('click').click( function( ) {
-            var withdraw_to_addr = $('#withdraw-to-address').val();
+    This will be used for a single form on the payment page.
+    On the claim page each row will provide different forms.
+    The claim page may use the same form to hold both sets of values, in which case it should be passed in twice.
+    */
+    function setup_claim_form(claim_frm, address_frm) {
+
+        claim_frm.find('.claim-from-address').unbind('click').click( function( ) {
+            var withdraw_to_addr = claim_frm.find('.withdraw-to-address').val();
             if (withdraw_to_addr == '') {
                 return false;
             }
 
             var network = $('#network').val();
-
             // Recreate the address to make sure it matches the keys
             var keys = {
-                'yes_user_pubkey': $('#our-pub-key').val(),
-                'no_user_pubkey': $('#your-pub-key').val(),
-                'yes_pubkey': $('#yes-pub-key').val(),
-                'no_pubkey': $('#no-pub-key').val(),
+                'yes_user_pubkey': address_frm.find('.our-pub-key').val(),
+                'no_user_pubkey': address_frm.find('.your-pub-key').val(),
+                'yes_pubkey': address_frm.find('.yes-pub-key').val(),
+                'no_pubkey': address_frm.find('.no-pub-key').val(),
                 'network': network
             };
+            console.log(keys);
             var addr = p2sh_address(keys);
+            if (addr == null) {
+                return false;
+            }
+
             keys['address'] = addr;
-            if ($('#funding-address').val() != addr) {
+            // Only check this on the main page, which has a funding-address field.
+            if ($('#funding-address').length && $('#funding-address').val() != addr) {
                 console.log("check addr was",$('#funding-address').val(),"but recreated addr was",addr,keys);
                 bootbox.alert('The addresses do not the match keys');
                 return false;
@@ -2019,21 +1899,9 @@ console.log("claim for network", network);
                 url: url, 
                 type: 'GET',
                 dataType: 'json'
-            }).done( function(data) {
-                var txes;
-                if (response_format == 'blockchain') { 
-                    txes = [];
-                    outputs = data['unspent_outputs'];
-                    for (var o in outputs) {
-                        if (outputs.hasOwnProperty(o)) {
-                            txes.push(outputs[o]);
-                        }
-                    }
-                } else {
-                    txes = data['data']['unspent'];
-                }
-                console.log("executing claim for txes", txes);
-                execute_claim(withdraw_to_addr, keys, txes, $('#your-private-key').val(), $('#winner-privkey').val(), network);
+            }).done( function(response) {
+                var data = format_unspent_response(response, response_format, addr);
+                execute_claim(withdraw_to_addr, keys, data['unspent_outputs'], $('#your-private-key').val(), claim_frm.find('.winner-privkey').val(), network);
             }).fail( function(data) {
                 console.log("could not fetch");
                 console.log(data.responseText);
@@ -2066,20 +1934,17 @@ console.log("claim for network", network);
     function initialize_page() {
 
         setup_user_key_form($('#user-key-form'));
-        setup_reality_key_form($('#create-reality-key-form'));
         setup_advanced_toggle();
 
         if ($('body').hasClass('claim-page')) {
             setup_claim_multiple_form();
         } else {
+            setup_reality_key_form($('#create-reality-key-form'));
             setup_make_address_form($('#make-address-form'));
             setup_check_form($('#address-check-form'));
-            setup_claim_form($('#claim-form'));
+            setup_claim_form($('#claim-form'), $('#make-address-form'));
+            handle_submit_create_reality_key_form($('#create-reality-key-form'));
         }
-
-        // Don't wait for a button click - create an address on defaults
-        handle_submit_create_reality_key_form($('#create-reality-key-form'));
-
 return;
         // Default the settlement date to 1 week from today
                 //console.log("trying to load default key");

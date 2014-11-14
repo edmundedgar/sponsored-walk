@@ -10,6 +10,7 @@ var query_livenet = 'blockchain';
 
 var pushtx_livenet = 'eligius';
 pushtx_livenet = 'both';
+pushtx_livenet = 'none';
 //pushtx_livenet = 'none';
 //pushtx_livenet = 'blockchain';
 

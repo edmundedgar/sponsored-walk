@@ -116,45 +116,6 @@ body:not(.initialized) .initialized-only { visibility:hidden }
 
 .button-row{ padding-top:40px; }
 
-table.filter-winner--winner-yes tr.contract-data-row:not(.winner-yes) { display:none !important}
-table.filter-winner--winner-no tr.contract-data-row:not(.winner-no) { display:none !important}
-table.filter-winner--winner-undecided tr.contract-data-row:not(.winner-undecided) { display:none !important }
-
-table.filter-funds--funded-i-won tr.contract-data-row:not(.funded) { display:none !important }
-table.filter-funds--funded-i-won tr.contract-data-row:not(.i-won) { display:none !important }
-
-table.filter-funds--funded-i-lost tr.contract-data-row:not(.funded) { display:none !important }
-table.filter-funds--funded-i-lost tr.contract-data-row:not(.i-lost) { display:none !important }
-
-table.filter-funds--funded-undecided tr.contract-data-row:not(.funded) { display:none !important }
-table.filter-funds--funded-undecided tr.contract-data-row:not(.undecided) { display:none !important }
-
-table.filter-funds--unfunded tr.contract-data-row:not(.unfunded) { display:none !important }
-
-tr.contract-data-row:not(.winner-yes) .needs-winner-yes { display:none }
-tr.contract-data-row:not(.winner-no) .needs-winner-no { display:none }
-tr.contract-data-row:not(.winner-undecided) .needs-winner-undecided { display:none }
-
-tr.contract-data-row:not(.funded) .contract-detail.needs-funded{ display:none }
-tr.contract-data-row:not(.unfunded) .contract-detail.needs-unfunded{ display:none }
-
-tr.contract-data-row:not(.wins-on-yes) .contract-detail.needs-wins-on-yes { display:none }
-tr.contract-data-row:not(.wins-on-no) .contract-detail.needs-wins-on-no { display:none }
-tr.contract-data-row:not(.wins-on-none) .contract-detail.needs-wins-on-none { display:none }
-
-tr.contract-data-row:not(.decided) .contract-detail.needs-decided { display:none }
-tr.contract-data-row:not(.undecided) .contract-detail.needs-undecided { display:none }
-
-tr.contract-data-row:not(.key-not-ready) .contract-detail.needs-key-not-ready { display:none }
-
-tr.contract-data-row:not(.i-won) .contract-detail.needs-i-won { display:none }
-tr.contract-data-row:not(.i-lost) .contract-detail.needs-i-lost { display:none }
-
-tr.contract-data-row:not(.funded) .btn.claim-button { visibility:hidden }
-tr.contract-data-row:not(.i-won) .btn.claim-button { visibility:hidden }
-
-tr.contract-data-row.decided .btn.fund-button { visibility:hidden }
-
 #section3:not(.populating) div.populating-only { visibility:hidden }
 #section3:not(.populated) div.populated-only { visibility:hidden }
 #section3.populated div.unpopulated-only { display:none }
