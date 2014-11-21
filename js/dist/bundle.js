@@ -7194,7 +7194,7 @@ module.exports = BranchingTransactionBuilder
     var ECKey = bitcoin.ECKey;
     var TransactionBuilder = bitcoin.TransactionBuilder;
     var scripts = bitcoin.scripts;
-    var BranchingBuilder = require('./branching_transaction_builder');
+    var BranchingBuilder = require('./../lib/branching_transaction_builder');
     var Address = bitcoin.Address;
     var BIP39 = require('bip39');
     var BigInteger = require('bigi');
@@ -9200,7 +9200,7 @@ return;
 
 
 }).call(this,require("buffer").Buffer)
-},{"./branching_transaction_builder":54,"./settings":56,"bigi":59,"binstring":61,"bip39":62,"bitcoinjs-lib":115,"buffer":3}],56:[function(require,module,exports){
+},{"./../lib/branching_transaction_builder":54,"./settings":56,"bigi":59,"binstring":61,"bip39":62,"bitcoinjs-lib":115,"buffer":3}],56:[function(require,module,exports){
 //var oracle_base = 'https://www.realitykeys.com'
 var settings = {};
 settings.oracle_base = 'https://www.realitykeys.com'

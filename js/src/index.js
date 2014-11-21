@@ -9,7 +9,7 @@
     var ECKey = bitcoin.ECKey;
     var TransactionBuilder = bitcoin.TransactionBuilder;
     var scripts = bitcoin.scripts;
-    var BranchingBuilder = require('./branching_transaction_builder');
+    var BranchingBuilder = require('./../lib/branching_transaction_builder');
     var Address = bitcoin.Address;
     var BIP39 = require('bip39');
     var BigInteger = require('bigi');
