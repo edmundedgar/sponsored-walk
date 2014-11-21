@@ -1,7 +1,21 @@
 
-    var bitcore = require('bitcore');
-    var oracle_api_base = oracle_base + '/api/v1';
-    var oracle_view_base = oracle_base + '/runkeeper/';
+    var settings = require('./settings');
+
+    var bitcoin = require('bitcoinjs-lib');
+    var conv = require('binstring'); // TODO: Can probably get this functionality from elsewhere
+    var crypto = bitcoin.crypto;
+
+    var ECPubKey = bitcoin.ECPubKey;
+    var ECKey = bitcoin.ECKey;
+    var TransactionBuilder = bitcoin.TransactionBuilder;
+    var scripts = bitcoin.scripts;
+    var BranchingBuilder = require('./branching_transaction_builder');
+    var Address = bitcoin.Address;
+    var BIP39 = require('bip39');
+    var BigInteger = require('bigi');
+
+    var oracle_api_base = settings.oracle_base + '/api/v1';
+    var oracle_view_base = settings.oracle_base + '/runkeeper/';
     var oracle_param_string = '?accept_terms_of_service=current';
     var runkeeper_profile_base = 'http://www.runkeeper.com/user';
 
@@ -416,7 +430,7 @@ console.log(c243t_tx_hex_wrong);
 
     function store_contract(c, is_update, success_callback, fail_callback) {
 
-        var url = pubkey_record_store;
+        var url = settings.pubkey_record_store;
         $.ajax({
             url: url, 
             type: 'POST',
@@ -646,6 +660,14 @@ console.log(c243t_tx_hex_wrong);
     function handle_user_key_update(k) {
 
         console.log('handle_user_key_update', k);
+
+        /*
+        var check_key = ECKey.fromWIF(key_wif);
+        var check_key_pub = check_key.pub;
+        assert(k['pub'] == check_key_pub.toHex(), 'check key pub matches');
+        */
+
+        //$('#your-private-key').val(k['priv']);
         $('#your-private-key').val(k['priv']);
         $('#your-pub-key').val(k['pub']);
         update_funding_address();
@@ -687,7 +709,7 @@ console.log(c243t_tx_hex_wrong);
         var k = null;
         if (!ng) {
             var seed = BIP39.mnemonicToSeedHex(mnemonic_text);
-            k = load_stored_key(mnemonic_text) || key_for_new_seed(mnemonic_text);
+            k = load_stored_key(mnemonic_text) || key_for_new_seed(seed);
             if (k['user_confirmed_ts']) { 
                 $('body').addClass('mnemonic-created-and-confirmed');
             } else if (!is_scripted) {
@@ -972,12 +994,15 @@ console.log("import import_hash "+import_hash);
         for (i=0; i < txes.length; i++) {
             
             var txHex = null;
+            txHex = hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
+            /*
             try {
                 txHex = hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
             } catch (e) {
                 console.log("hex creation failed", e);
                 continue;
             }
+            */
             console.log(txHex);
 
             // For now our spending transaction is non-standard, so we have to send to eligius.
@@ -985,10 +1010,10 @@ console.log("import import_hash "+import_hash);
             // Presumably they do not support CORS, and we have to submit to their web form.
             // We will send our data by putting it in an iframe and submitting it.
             // We will not be able to read the result from the script, although we could make it visible to the user.
-            if (network == 'livenet' && pushtx_livenet == 'none') {
+            if (network == 'livenet' && settings.pushtx_livenet == 'none') {
                 console.log('created but will not broadcast', txHex);
                 return;
-            } else if (network == 'livenet' && pushtx_livenet == 'eligius') {
+            } else if (network == 'livenet' && settings.pushtx_livenet == 'eligius') {
                 eligius_cross_domain_post(txHex);
             } else {
                 // this will always be testnet until the happy day when bitcore makes our transactions standard
@@ -1010,7 +1035,7 @@ console.log("import import_hash "+import_hash);
                         console.log(response);
                         if (network == 'testnet') {
                             var txid = response['data'];
-                            if (network == 'livenet' && pushtx_livenet == 'both') {
+                            if (network == 'livenet' && settings.pushtx_livenet == 'both') {
                                 // submit direct to eligius just to be sure...
                                 eligius_cross_domain_post(txHex);
                             }
@@ -1033,7 +1058,7 @@ console.log("import import_hash "+import_hash);
 
         var tx = tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network); 
         console.log("tx_for_claim_execution:", tx);
-        var txHex =  tx.serialize().toString('hex');
+        var txHex =  tx.toHex();
         //console.log(txHex);
 
         return txHex;
@@ -1042,7 +1067,10 @@ console.log("import import_hash "+import_hash);
 
     function tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network) {
 
-console.log("in tx_for_claim_execution", to_addr, priv1, priv2, tx, c, network);
+        // Find the right branch.
+        // This should have both the keys.
+
+console.log("in tx_for_claim_execution", c);
 
         //console.log(tx);
         var amount = tx['value'];
@@ -1061,66 +1089,87 @@ console.log("in tx_for_claim_execution", to_addr, priv1, priv2, tx, c, network);
         ];
         console.log("made utxos2", utxos2);
 
-        var pubkeys = [
-            [ c['yes_user_pubkey'], c['yes_pubkey'] ],
-            [ c['no_user_pubkey'], c['no_pubkey'] ],
-            [ c['yes_user_pubkey'], c['no_user_pubkey'] ]
-        ];
-        console.log("pubkeys", pubkeys);
-        console.log("priv1", priv1);
-        console.log("priv2", priv2);
-        console.log("amount", amount);
-
         var fee = 10000;
-        var opts = {network: bitcore.networks[network], nreq:[2,2,2], pubkeys:pubkeys, fee: (fee)/100000000};
-        console.log("opts", opts);
+        //var opts = {network: bitcoin.networks[network], nreq:[2,2,2], pubkeys:pubkeys, fee: (fee)/100000000};
+        //console.log("opts", opts);
 
         outs = [{address:to_addr, amount:((amount-fee)/100000000)}];
         console.log("outs", outs);
         console.log("amount-fee", (amount-fee));
         //console.log("outs:");
-        console.log("c_acddress", c['address']);
+        console.log("c_address", c['address']);
         //console.log(outs);
-
-        var hashMap = {};
-        hashMap[ c['address'] ] = redeem_script(c);
 
         //var privs = [winner_privkey, 'HERE'];
         //var privs = [winner_privkey];
         //console.log(winner_privkey);
 
-        var b = new bitcore.TransactionBuilder(opts);
-        b.setUnspent(utxos2);
-        b.setHashToScriptMap(hashMap);
-        b.setOutputs(outs);
+        console.log("create builder");
+        var b = new bitcoin.TransactionBuilder();
+        console.log("addi input");
+        b.addInput(utxos2[0]['txid'], 0);
+        console.log("addi output");
+        b.addOutput(to_addr, (amount-fee));
 
-        //console.log("user_privkey:");
-        //console.log(user_privkey);
+        console.log("outputs done, doing redeem sript thing");
 
-        //console.log("winner_privkey:");
-        //console.log(winner_privkey);
+        var multisig_redeem_script = redeem_script(c);
+        var branching_builder = new BranchingBuilder(b);
 
-        var user_wk = new bitcore.WalletKey({ network: bitcore.networks[network]});
-        user_wk.fromObj( {
-            priv: priv1,
-        });
-        var user_wk_obj = user_wk.storeObj();
-        var user_privkey_wif = user_wk_obj.priv;
+        var user_wk = ECKey.fromWIF(priv1);
+        var winner_wk = ECKey.fromWIF(priv2);
 
-        var winner_wk = new bitcore.WalletKey({ network: bitcore.networks[network]});
-        winner_wk.fromObj( {
-            priv: priv2,
-        });
-        var winner_wk_obj = winner_wk.storeObj();
-        var winner_privkey_wif = winner_wk_obj.priv;
+        var claim_privkeys = [ user_wk, winner_wk ];
+        var claim_pubkeys = claim_privkeys.map( function(x) { return x.pub.toHex(); });
 
-        console.log("priv1wif", user_privkey_wif);
-        console.log("priv2wif", winner_privkey_wif);
+        var combos = [
+            [ c['yes_user_pubkey'], c['yes_pubkey'] ],
+            [ c['no_user_pubkey'], c['no_pubkey'] ],
+            [ c['yes_user_pubkey'], c['no_user_pubkey'] ]
+        ];
 
-        b.sign([user_privkey_wif, winner_privkey_wif]);
-        //b.sign([winner_privkey, winner_privkey]);
-        tx = b.build();
+        var branch = -1;
+        for (var i=0; i<combos.length; i++) {
+            var combo = combos[i];
+            var intersection = combo.filter(function(n) {
+                    return claim_pubkeys.indexOf(n) != -1
+            });
+            if (intersection.length == claim_privkeys.length) {
+                branch = i;
+                break;
+            }
+        }
+
+        assert(branch >= 0);
+
+        console.log("claiming with branch pubkeys:", branch, claim_pubkeys);
+        //var user_pubkeys = [ c['yes_user_pubkey'], c['no_user_pubkey'] ];
+
+        //yes_pubkeys = yes_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+        claim_pubkeys = claim_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+        //user_pubkeys = user_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+
+        //var combo1 = scripts.multisigOutput(2, yes_pubkeys);
+        console.log("getting winning_combo");
+        var winning_combo = scripts.multisigOutput(2, claim_pubkeys);
+        //var combo3 = scripts.multisigOutput(2, user_pubkeys);
+
+        console.log("selecting input branch");
+        branching_builder.selectInputBranch(0, branch, combos.length);
+        //b.sign([user_privkey_wif, winner_privkey_wif]);
+
+        console.log("signing branch");
+        for (var i=0; i<claim_privkeys.length; i++) {
+            branching_builder.signBranch(0, claim_privkeys[i], multisig_redeem_script, null, winning_combo)
+        }
+
+        console.log("doing the build");
+        var tx = branching_builder.build();
+        console.log("done the build", tx);
+
+        //tx = b.build();
         return tx;
+
     }
 
     function testnet_setting_to_prefix(is_testnet) {
@@ -1164,6 +1213,7 @@ console.log("in tx_for_claim_execution", to_addr, priv1, priv2, tx, c, network);
         row.find('.no-pub-key').val(c['no_pubkey']);
         row.find('.no-pub-key').val(c['no_pubkey']);
         row.find('.winner-privkey').val(c['winner_privkey']);
+        row.find('.funding-address').val(c['address']);
 
         var lnk = $('<a>');
         lnk.attr('href', 'https://blockchain.info/address/' + format_address(c['address']));
@@ -1238,18 +1288,15 @@ console.log("in tx_for_claim_execution", to_addr, priv1, priv2, tx, c, network);
     }
 
     function key_for_new_seed(seed) {
-        var privateKey = bitcore.util.sha256(seed);
-
-        var key = new bitcore.Key();
-        key.private = privateKey;
-        key.regenerateSync();
-        var hash = bitcore.util.sha256ripe160(key.public);
-
+        var privateKey = crypto.sha256(seed).toString('hex');
+        var key_buffer = conv(privateKey, {in: 'hex', out: 'buffer'});
+        var big_integer = BigInteger.fromBuffer(key_buffer);
+        var key = new ECKey(big_integer, true);
         return {
             'seed': seed,
             'version': '1.0',
-            'priv': key.private.toString('hex'),
-            'pub': key.public.toString('hex'),
+            'priv': key.toWIF(),
+            'pub': key.pub.toHex(),
             'user_confirmed_ts': null
         };
 
@@ -1263,7 +1310,13 @@ console.log("in tx_for_claim_execution", to_addr, priv1, priv2, tx, c, network);
         if (!data['no_pubkey']) return null;
 console.log("p2sh_address", data);
         var script = redeem_script(data);
-        var addr = bitcore.Address.fromScript(script, data['network']);
+
+        //var addr = bitcore.Address.fromScript(script, data['network']);
+
+        var scriptPubKey = bitcoin.scripts.scriptHashOutput(script.getHash());
+        console.log(scriptPubKey);
+        var addr = bitcoin.Address.fromOutputScript(scriptPubKey).toString()
+
 
         return addr.toString();
 
@@ -1274,18 +1327,25 @@ console.log("p2sh_address", data);
         var yes_pubkeys = [ data['yes_user_pubkey'], data['yes_pubkey'] ];
         var no_pubkeys = [ data['no_user_pubkey'], data['no_pubkey'] ];
         var user_pubkeys = [ data['yes_user_pubkey'], data['no_user_pubkey'] ];
-        // multisig group p2sh
-        var opts = {
-            nreq: [2,2,2],
-            pubkeys: [ yes_pubkeys, no_pubkeys, user_pubkeys ]
-        };
 
-        var address_version = data['network'];
-        var info = TransactionBuilder.infoForP2sh(opts, address_version);
-        var p2shScript = info.scriptBufHex;
-        //console.log("redeem script:");
-        //console.log(p2shScript);
-        return p2shScript;
+        yes_pubkeys = yes_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+        no_pubkeys = no_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+        user_pubkeys = user_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+
+        var combo1 = scripts.multisigOutput(2, yes_pubkeys);
+        var combo2 = scripts.multisigOutput(2, no_pubkeys);
+        var combo3 = scripts.multisigOutput(2, user_pubkeys);
+
+        var branching_builder = new BranchingBuilder();
+        branching_builder.addSubScript(combo1);
+        branching_builder.addSubScript(combo2);
+        branching_builder.addSubScript(combo3);
+
+        var p2sh_script = branching_builder.script();
+        console.log("redeem script:");
+        console.log(p2sh_script);
+
+        return p2sh_script;
 
     }
 
@@ -1600,13 +1660,15 @@ console.log("p2sh_address", data);
     }
 
     function handle_funding_address_update(addr) {
+
         show_address_balance(addr, $('#network').val());
+
     }
 
     function fetch_contract_data_for_site_resource_id(site_resource_id, success_callback, fail_callback) {
 
         $('body').addClass('fetching-contract-data');
-        var url = pubkey_record_query;
+        var url = settings.pubkey_record_query;
 
         var response;
         var request_type = 'GET';
@@ -1798,7 +1860,7 @@ console.log("p2sh_address", data);
 
         var response_format = 'blockr';
         if (network == 'livenet') {
-            if (query_livenet == 'blockchain') {
+            if (settings.query_livenet == 'blockchain') {
                 url = 'https://blockchain.info/unspent?cors=true&active='+addr; 
                 response_format = 'blockchain';
             } else {
@@ -1869,13 +1931,13 @@ console.log("p2sh_address", data);
             var network = $('#network').val();
             // Recreate the address to make sure it matches the keys
             var keys = {
-                'yes_user_pubkey': address_frm.find('.our-pub-key').val(),
-                'no_user_pubkey': address_frm.find('.your-pub-key').val(),
+                'yes_user_pubkey': address_frm.find('.your-pub-key').val(),
+                'no_user_pubkey': address_frm.find('.our-pub-key').val(),
                 'yes_pubkey': address_frm.find('.yes-pub-key').val(),
                 'no_pubkey': address_frm.find('.no-pub-key').val(),
                 'network': network
             };
-            console.log(keys);
+            console.log("using keys to get p2sh: ",keys);
             var addr = p2sh_address(keys);
             if (addr == null) {
                 return false;
@@ -1901,6 +1963,7 @@ console.log("p2sh_address", data);
                 dataType: 'json'
             }).done( function(response) {
                 var data = format_unspent_response(response, response_format, addr);
+                console.log("compare keys and addr", keys, addr);
                 execute_claim(withdraw_to_addr, keys, data['unspent_outputs'], $('#your-private-key').val(), claim_frm.find('.winner-privkey').val(), network);
             }).fail( function(data) {
                 console.log("could not fetch");
@@ -1927,10 +1990,6 @@ console.log("p2sh_address", data);
 
     }
 
-    function populate_claim_form() {
-
-    }
-
     function initialize_page() {
 
         setup_user_key_form($('#user-key-form'));
@@ -1951,4 +2010,6 @@ return;
         $('body').addClass('initialized');
 
     }
+
+    initialize_page();
 

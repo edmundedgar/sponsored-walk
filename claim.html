@@ -112,7 +112,19 @@
                     <td data-type="funds" class="col-md-1"></td>
                     <td data-type="claim-button" class="col-md-1">
 <form class="claim-form">
+        <input class="withdraw-to-address" type="text" size="38" />
 <table class="advanced">
+    <tr>
+    <td>
+        Spend from
+    </td>
+    <td>
+        <input class="funding-address" type="text" size="38" />
+    </td>
+    <td colspan="2">
+    &nbsp;
+    </td>
+    </tr>
     <tr>
     <td>
         Our key
@@ -121,7 +133,7 @@
         <input size="66" class="pubkey our-pub-key" name="our-pub-key" type="text" value="02f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e" />
     </td>
     <td>
-        Their key
+        User key
     </td>
     <td>
         <input size="66" class="pubkey your-pub-key" name="your-pub-key" type="text" value="" />
@@ -129,16 +141,16 @@
     </tr>
     <tr>
     <td>
-        No key
-    </td>
-    <td>
-        <input size="66" class="pubkey no-pub-key" name="no-pub-key" type="text" />
-    </td>
-    <td>
         Yes key
     </td>
     <td>
         <input size="66" class="pubkey yes-pub-key" name="yes-pub-key" type="text" />
+    </td>
+    <td>
+        No key
+    </td>
+    <td>
+        <input size="66" class="pubkey no-pub-key" name="no-pub-key" type="text" />
     </td>
     </tr>
     <tr>
@@ -185,14 +197,8 @@
     <script src="js/scripts.js"></script>
 
     <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
-    <script src="js/bitcore.js"></script>
-    <script src="js/bitcore_monkey_patches.js"></script>
-    <script src="js/bip39.js"></script>
     <script src="js/bootbox.min.js"></script>
-    <script src="js/settings.js"></script>
-    <script src="js/sponsored.js"></script>
-    <script>
-    initialize_page();
-    </script>
+
+    <script src="js/bundle.js"></script>
   </body>
 </html>
