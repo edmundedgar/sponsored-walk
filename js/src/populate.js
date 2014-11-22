@@ -26,7 +26,7 @@ $(function() {
 
     $('#site-resource-id').val(site_resource_id);
 
-    var url = 'resources/?id=' + site_resource_id;
+    var url = 'api/resources/?id=' + site_resource_id;
     $.ajax({
         url: url,
         type: 'GET',
