@@ -8,9 +8,7 @@
   },
   "scripts": {
     "test": "mocha",
-    "build-debug": "browserify src/index.js -d -o dist/bundle.js",
-    "build-min": "browserify src/index.js | uglifyjs -c > dist/bundle.min.js",
-    "build": "npm run build-debug && npm run build-min",
+    "build": "browserify src/index.js -d --s index -o dist/bundle.js",
     "watch": "watchify src/index.js -d -o dist/bundle.js -v"
   },
   "author": "Edmund Edgar",

@@ -70,24 +70,17 @@
 
 <h3>Sponsor</h3>
 
-<form method="POST" action="#" id="create-reality-key-form" class="create-not-ready advanced" role="form">
-
-    <input type="hidden" name="setting_default_days_in_future" value="14">
-
-    <a href="http://runkeeper.com/user/edochan">edochan</a></h3>
-    <input type="text" name="user_id" placeholder="User on RunKeeper" value="29908850" />
-    to
-    <select name="activity" class="">
-        <option value=""></option>
-        <option data-verb="run" data-unit="m" value="running">run</option>
-        <option data-verb="walk" data-unit="m" value="walking" selected>walk</option>
-    </select>
+<form method="POST" action="#" id="create-reality-key-form" class="" role="form">
+    <input type="hidden" id="setting_default_days_in_future" name="setting_default_days_in_future" value="14">
+    <input type="text" id="user_id" name="user_id" placeholder="User on RunKeeper" value="29908850" />
+    to complete
+    <input type="text" id="activity" name="activity" placeholder="running or walking" value="running" />
     a
-    <input type="text" name="measurement" value="cumulative_distance" />
+    <input type="text" id="measurement" name="measurement" value="cumulative_distance" />
     of
-    <input size="8" class="" type="text" name="goal" placeholder="Goal" value="1000"> 
+    <input size="8" class="" type="text" id="goal" name="goal" placeholder="Goal" value="1000">
     meters by
-    <input size="8" type="text" name="settlement_date" placeholder="Date" value="" class="">
+    <input size="8" type="text" id="settlement_date" name="settlement_date" placeholder="Date" value="" class="">
     <input id="register-fact-button" class="btn btn-primary " type="submit" value="Register" />
     <input type="text" id="override-with-existing-fact-id" value="243" name="override-with-existing-fact-id" />
 </form>
@@ -186,13 +179,8 @@
     <script src="js/lib/scripts.js"></script>
 
     <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
-    <!--
-    <script src="js/bitcore.js"></script>
-    <script src="js/bitcore_monkey_patches.js"></script>
-    <script src="js/bip39.js"></script>
-    <script src="js/settings.js"></script>
-    <script src="js/sponsored.js"></script>
-    -->
+
     <script src="js/dist/bundle.js"></script>
+    <script src="js/src/populate.js"></script>
   </body>
 </html>
