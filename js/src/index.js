@@ -37,18 +37,18 @@
             fail_callback(data);
             return;
         }).always( function(data) {
-            console.log("store response", data);
+            //console.log("store response", data);
         });
 
 
-        console.log("store: ",c);
+        //console.log("store: ",c);
         return;
 
     }
 
     function handle_user_key_update(k) {
 
-        console.log('handle_user_key_update', k);
+        //console.log('handle_user_key_update', k);
 
         /*
         var check_key = ECKey.fromWIF(key_wif);
@@ -77,7 +77,7 @@
 
         var mnemonic_text = inp.val();
         if (mnemonic_text == '') {
-            console.log('mnemonic_text empty');
+            //console.log('mnemonic_text empty');
             ng = true;
         } 
 
@@ -85,13 +85,13 @@
         if (!ng) {
             words = mnemonic_text.split(' ');
             if (words.length != 12) {
-                console.log('mnemonic_text contains wrong number of words');
+                //console.log('mnemonic_text contains wrong number of words');
                 ng = true;
             }
         }
 
         if (!ng && !BIP39.validateMnemonic(mnemonic_text)) {
-                console.log('mnemonic_text invalid');
+                //console.log('mnemonic_text invalid');
                 ng = true;
         }
 
@@ -177,8 +177,8 @@
                 }
             },
             error: function(data) {
-                console.log("got error from load");
-                console.log(data);
+                //console.log("got error from load");
+                //console.log(data);
             }
         });
         return false;
@@ -187,7 +187,7 @@
     function hash_to_contract(import_hash) {
 
         if (!/^#.*-.*-\d+-t?btc$/.test(import_hash)) {
-            //console.log('import hash wrongly formatted, not even going to try to parse it');
+            ////console.log('import hash wrongly formatted, not even going to try to parse it');
             return null;
         }
 
@@ -222,7 +222,7 @@
 
     function view_contract_if_in_hash(import_hash) {
 
-console.log("import import_hash "+import_hash);
+//console.log("import import_hash "+import_hash);
         var c = hash_to_contract(import_hash);
         if (c == null) {
             return false;
@@ -254,8 +254,8 @@ console.log("import import_hash "+import_hash);
 
         // Make sure we have at least one of the keys
         url = oracle_api_base + '/fact/' + c['id'] + '/' + oracle_param_string;
-        console.log("fetching reality keys data:");
-        console.log(url);
+        //console.log("fetching reality keys data:");
+        //console.log(url);
         $.ajax({
             url: url, 
             type: 'GET',
@@ -277,8 +277,8 @@ console.log("import import_hash "+import_hash);
                 $(document).scrollTop( $("#section3").offset().top );
             },
             error: function(data) {
-                console.log("got error from fake");
-                console.log(data);
+                //console.log("got error from fake");
+                //console.log(data);
             }
         });
         return false;
@@ -322,11 +322,11 @@ console.log("import import_hash "+import_hash);
             try {
                 txHex = realitykeys_utils.hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
             } catch (e) {
-                console.log("hex creation failed", e);
+                //console.log("hex creation failed", e);
                 continue;
             }
             */
-            console.log(txHex);
+            //console.log(txHex);
 
             // For now our spending transaction is non-standard, so we have to send to eligius.
             // Hopefully this will be fixed in bitcoin core fairly soon, and we can use same the blockr code for testnet.
@@ -334,7 +334,7 @@ console.log("import import_hash "+import_hash);
             // We will send our data by putting it in an iframe and submitting it.
             // We will not be able to read the result from the script, although we could make it visible to the user.
             if (network == 'livenet' && settings.pushtx_livenet == 'none') {
-                console.log('created but will not broadcast', txHex);
+                //console.log('created but will not broadcast', txHex);
                 return;
             } else {
                 // this will always be testnet until the happy day when bitcore makes our transactions standard
@@ -353,7 +353,7 @@ console.log("import import_hash "+import_hash);
                     url: url,
                     data: tx_data,
                     success: function( response ) {
-                        console.log(response);
+                        //console.log(response);
                         if (network == 'testnet') {
                             var txid = response['data'];
                             if (network == 'livenet' && settings.pushtx_livenet == 'both') {
@@ -366,7 +366,7 @@ console.log("import import_hash "+import_hash);
                     },
                     error: function ( response ) {
                         bootbox.alert('Sending transaction failed.');
-                        console.log(response);
+                        //console.log(response);
                     },
                     dataType: 'json', 
                 });
@@ -448,8 +448,8 @@ console.log("import import_hash "+import_hash);
             type: 'GET',
             dataType: 'json', 
             success: function(data) {
-                //console.log("got response from blockchain");
-                //console.log(data);
+                ////console.log("got response from blockchain");
+                ////console.log(data);
                 c['balance'] = data['data']['balance'];
                 populate_reality_key_and_append_to_display(c);
             },
@@ -497,26 +497,26 @@ console.log("import import_hash "+import_hash);
             request_type = 'GET';
             params = null;
         } 
-        console.log('Submitting to url');
-        console.log(url);
-        console.log(params);
+        //console.log('Submitting to url');
+        //console.log(url);
+        //console.log(params);
         $.ajax({
             url: url, 
             type: request_type,
             data: params,
             dataType: 'json', 
         }).done(function(data) {
-            console.log('done');
-            console.log(data);
+            //console.log('done');
+            //console.log(data);
             success_callback(data);
             return true;
         }).fail( function(data) {
-            console.log('fail');
-            console.log(data);
+            //console.log('fail');
+            //console.log(data);
             fail_callback(data);
             return false;
         }).always( function(data) {
-            console.log('always');
+            //console.log('always');
             $('body').removeClass('registering-fact');
             return true;
         });
@@ -539,8 +539,8 @@ console.log("import import_hash "+import_hash);
         register_contract(
             params, 
             function(data) { 
-                console.log('ok!');
-                console.log(data);
+                //console.log('ok!');
+                //console.log(data);
                 $('#reality-key-id').val(data['id']);
                 $('#yes-pub-key').val(data['yes_pubkey']);
                 $('#no-pub-key').val(data['no_pubkey']);
@@ -582,15 +582,15 @@ console.log("import import_hash "+import_hash);
 
         $('#remember-mnemonic-button').unbind('click').click( function() {
             var mnemonic_text = $('#mnemonic').val();
-            console.log("getting seed for", mnemonic_text);
+            //console.log("getting seed for", mnemonic_text);
             var seed = BIP39.mnemonicToSeedHex(mnemonic_text);
             var k = storage.load_stored_key(mnemonic_text) || bitcoin_utils.key_for_new_seed(seed);
             k['user_confirmed_ts'] = new Date().getTime();
-            console.log("store", k);
+            //console.log("store", k);
             if (!storage.store_key(mnemonic_text, k, true)) {
                 return false;
             }
-            console.log("stored", k);
+            //console.log("stored", k);
 
             $('body').addClass('mnemonic-stored');
         });
@@ -605,7 +605,7 @@ console.log("import import_hash "+import_hash);
             $('#mnemonic').val(default_mnemonic);
             $('body').addClass('mnemonic-stored');
         } else {
-            console.log('not got key');
+            //console.log('not got key');
         } 
 
         $('#show-mnemonic-link').click( function() {
@@ -650,7 +650,7 @@ console.log("import import_hash "+import_hash);
             'network': network,
             'site_resource_id': $('#site-resource-id').val()
         };
-        console.log('c:',c);
+        //console.log('c:',c);
         var addr = realitykeys_utils.p2sh_address(c);
         c['address'] = addr; // used by store
 
@@ -673,7 +673,7 @@ console.log("import import_hash "+import_hash);
                     },
                     function(data) {
                         $('#funding-address').val(''); 
-                        console.log('storing contract failed', data);
+                        //console.log('storing contract failed', data);
                     }
                 );
             }
@@ -696,26 +696,26 @@ console.log("import import_hash "+import_hash);
         var request_type = 'GET';
         var params = {'site_resource_id': site_resource_id}
 
-        console.log('Submitting to url');
-        console.log(url);
-        console.log(params);
+        //console.log('Submitting to url');
+        //console.log(url);
+        //console.log(params);
         $.ajax({
             url: url, 
             type: request_type,
             data: params,
             dataType: 'json', 
         }).done(function(data) {
-            console.log('done');
-            console.log(data);
+            //console.log('done');
+            //console.log(data);
             success_callback(data);
             return true;
         }).fail( function(data) {
-            console.log('fail');
-            console.log(data);
+            //console.log('fail');
+            //console.log(data);
             fail_callback(data);
             return false;
         }).always( function(data) {
-            console.log('always');
+            //console.log('always');
             $('body').removeClass('fetching-contract-data');
             return true;
         });
@@ -726,7 +726,7 @@ console.log("import import_hash "+import_hash);
 
         var our_pub_key = $('#our-pub-key').val();
         if (our_pub_key == null) {
-            console.log('cannot set up claim form, our pub key not found');
+            //console.log('cannot set up claim form, our pub key not found');
             return;
         }
 
@@ -750,7 +750,7 @@ console.log("import import_hash "+import_hash);
                         'no_user_pubkey': c['no_user_pubkey']
                     };
                 }
-                console.log("got addresses:",addresses);
+                //console.log("got addresses:",addresses);
                 var url_info = unspent_url_info( addresses, network );
                 var url = url_info['url'];
                 var response_format = url_info['response_format'];
@@ -783,7 +783,7 @@ console.log("import import_hash "+import_hash);
                         addr_to_balance[ad] = a['final_balance'];
                         total_paid = total_paid + a['final_balance'];
                     }
-                    console.log(addr_to_balance);
+                    //console.log(addr_to_balance);
                     $('#address-balance').html(total_paid/100000000);
 
                     if (total_paid > 0) {
@@ -811,13 +811,13 @@ console.log("import import_hash "+import_hash);
                                     var i_won = (rk['winner'] == 'Yes' && rk['yes_user_pubkey'] == our_pub_key) || (rk['winner'] == 'No' && rk['no_user_pubkey'] == our_pub_key);
                                     if ( (rk['winner'] == 'Yes') || (rk['winner'] == 'No') ) {
                                         if (i_won) {
-                                            console.log('i won');
-                                            console.log(rk);
+                                            //console.log('i won');
+                                            //console.log(rk);
                                             append_contract_to_display(rk);
                                             available_to_claim_balance = available_to_claim_balance + rk['balance'];
                                         } else {
-                                            console.log('i lost');
-                                            console.log(rk);
+                                            //console.log('i lost');
+                                            //console.log(rk);
                                             waiting_for_refund_balance = waiting_for_refund_balance + rk['balance'];
                                         } 
                                     } else {
@@ -835,7 +835,7 @@ console.log("import import_hash "+import_hash);
                     }
 
                 }).fail( function(data) {
-                    console.log(data.responseText);
+                    //console.log(data.responseText);
                     // With blockchain over 
                     $('#address-balance').html('0');
                 }).always( function() {
@@ -905,13 +905,13 @@ console.log("import import_hash "+import_hash);
     function show_address_balance(addr, network) {
 
         $('body').addClass('fetching-balance');
-        console.log("in show_address_balance", addr, network);
+        //console.log("in show_address_balance", addr, network);
 
         var url_info = unspent_url_info(addr, network);;
         var url = url_info['url'];
         var response_format = url_info['response_format'];
 
-        console.log("fetching unspent:");
+        //console.log("fetching unspent:");
         $('body').addClass('fetching-balance-for-claim');
             
         $.ajax({
@@ -923,7 +923,7 @@ console.log("import import_hash "+import_hash);
             balance = bitcoin_utils.satoshis_to_display_format(unspent_data['balance']);
             $('#address-balance').text(balance);
         }).fail( function(data) {
-            console.log(data.responseText);
+            //console.log(data.responseText);
             // With blockchain over 
             $('#address-balance').html('0');
         }).always( function() {
@@ -959,7 +959,7 @@ console.log("import import_hash "+import_hash);
                 'no_pubkey': address_frm.find('.no-pub-key').val(),
                 'network': network
             };
-            console.log("using keys to get p2sh: ",keys);
+            //console.log("using keys to get p2sh: ",keys);
             var addr = realitykeys_utils.p2sh_address(keys);
             if (addr == null) {
                 return false;
@@ -968,7 +968,7 @@ console.log("import import_hash "+import_hash);
             keys['address'] = addr;
             // Only check this on the main page, which has a funding-address field.
             if ($('#funding-address').length && $('#funding-address').val() != addr) {
-                console.log("check addr was",$('#funding-address').val(),"but recreated addr was",addr,keys);
+                //console.log("check addr was",$('#funding-address').val(),"but recreated addr was",addr,keys);
                 bootbox.alert('The addresses do not the match keys');
                 return false;
             }
@@ -977,7 +977,7 @@ console.log("import import_hash "+import_hash);
             var url = url_info['url'];
             var response_format = url_info['response_format'];
             
-            console.log("fetching unspent:");
+            //console.log("fetching unspent:");
             $('body').addClass('fetching-balance-for-claim');
             $.ajax({
                 url: url, 
@@ -985,11 +985,11 @@ console.log("import import_hash "+import_hash);
                 dataType: 'json'
             }).done( function(response) {
                 var data = bitcoin_utils.format_unspent_response(response, response_format, addr);
-                console.log("compare keys and addr", keys, addr);
+                //console.log("compare keys and addr", keys, addr);
                 execute_claim(withdraw_to_addr, keys, data['unspent_outputs'], $('#your-private-key').val(), claim_frm.find('.winner-privkey').val(), network);
             }).fail( function(data) {
-                console.log("could not fetch");
-                console.log(data.responseText);
+                //console.log("could not fetch");
+                //console.log(data.responseText);
             }).always( function() {
                 $('body').removeClass('fetching-balance-for-claim');
             });
@@ -1012,7 +1012,7 @@ console.log("import import_hash "+import_hash);
 
     }
 
-    function initialize_page() {
+    exports.initialize_page = function() {
 
         setup_user_key_form($('#user-key-form'));
         setup_advanced_toggle();
@@ -1026,12 +1026,6 @@ console.log("import import_hash "+import_hash);
             setup_claim_form($('#claim-form'), $('#make-address-form'));
             handle_submit_create_reality_key_form($('#create-reality-key-form'));
         }
-return;
-        // Default the settlement date to 1 week from today
-                //console.log("trying to load default key");
         $('body').addClass('initialized');
 
     }
-
-    initialize_page();
-
