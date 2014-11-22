@@ -137,6 +137,7 @@ section.goal-stored .view-goal-store { display: none }
 
 body:not(.mnemonic-created-and-confirmed) li.needs-mnemonic-created-and-confirmed a { color:gray }
 body.mnemonic-created-and-confirmed #confirm-mnemonic-button { display: none }
+body:not(.mnemonic-created-and-confirmed) .needs-mnemonic-confirmation { display: none }
 
 body.athlete-connected #authenticate-runkeeper-user {display:none}
 
@@ -185,9 +186,8 @@ We use visibility hidden here instead of display none to avoid confusing the bro
 */
 .goal-view-section { visibility: hidden }
 #mnemonic, #mnemonic-shadow {
-    text-align: center;
-    padding-left:0px; 
-    padding-right:0px; 
+    padding-left:30px;
+    text-align: left;
     border: 1px solid gray;
 }
 
@@ -201,6 +201,7 @@ We use visibility hidden here instead of display none to avoid confusing the bro
 #mnemonic-shadow {
   -webkit-transition: width 1s; /* For Safari 3.1 to 6.0 */
   transition: width 1s;
+  background-color:gray;
 }
 
 #mnemonic {

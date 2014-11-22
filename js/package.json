@@ -2,14 +2,14 @@
   "name": "realitykeys-js-example",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "main.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "test": "mocha",
-    "build": "browserify src/index.js -d --s index -o dist/bundle.js",
-    "watch": "watchify src/index.js -d -o dist/bundle.js -v"
+    "build": "browserify src/main.js -d --s main -o dist/bundle.js",
+    "watch": "watchify src/main.js -d --s -o dist/bundle.js -v"
   },
   "author": "Edmund Edgar",
   "license": "MIT",

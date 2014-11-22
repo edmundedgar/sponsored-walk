@@ -608,8 +608,23 @@
             //console.log('not got key');
         } 
 
+        $('#mnemonic-shadow').click( function() {
+            frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
+        });
+        $('#mnemonic-shadow').focus( function() {
+            if (frm.hasClass('show-mnemonic')) {
+                frm.removeClass('show-mnemonic').addClass('hide-mnemonic');
+            } else {
+                frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
+                $('#mnemonic').focus();
+            }
+        });
+        $('#mnemonic').focus( function() {
+            frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
+        });
         $('#show-mnemonic-link').click( function() {
             frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
+            $('#mnemonic').focus();
         });
         $('#hide-mnemonic-link').click( function() {
             frm.addClass('hide-mnemonic').removeClass('show-mnemonic');

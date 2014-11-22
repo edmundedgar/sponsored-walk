@@ -41,20 +41,29 @@
 
 <div class="container-fluid goal-div needs-connect" id="div1">
 
+<h2 id="title"></h2>
+
 <div>
     <form id="user-key-form" class="hide-mnemonic">
         <h3 class="">Your Secret</h3>
         <p>We have made you a secret list of words for you. Anyone who has this list of words can claim your bitcoins. 
         <br />
         Make sure you keep a copy of this safe to be sure you can get your bitcoins back.</p>
-        <input class="" id="mnemonic" type="text" placeholder="Your secret words" /><input id="mnemonic-shadow" type="text" value="**** ****** ******* ***** ***** ****** ******* *** *****" />  <a id="show-mnemonic-link" href="#">Show</a> <a id="hide-mnemonic-link" href="#">Hide</a>
+        <input class="" id="mnemonic" type="text" placeholder="Your secret words" /><input id="mnemonic-shadow" type="text" value="" readonly />
+        <br />
+        <a id="show-mnemonic-link" href="#">Show</a>
+        <a id="hide-mnemonic-link" href="#">Hide</a>
         <!--
         <br />
         <input style="width:500px" class="btn btn-primary" id="confirm-mnemonic-button" value="Use this secret (I've made a copy)" />
         -->
         <br />
-        <input style="" size="50" class="btn btn-primary" id="remember-mnemonic-button" value="Store this secret in your browser" />
-        <input style="" size="60" class="btn btn-primary" id="forget-mnemonic-button" value="Don't store this secret in your browser (more secure)" />
+
+
+        <input style="" class="btn btn-primary" id="remember-mnemonic-button" value="Yes, store it" />
+        <input style="" class="btn btn-primary" id="forget-mnemonic-button" value="Stop storing it" />
+
+
         <div class="advanced">
         <br />
         <br />

@@ -41,20 +41,30 @@
 
 <div class="container-fluid goal-div needs-connect" id="div1">
 
+<h2 id="title"></h2>
+
 <div>
     <form id="user-key-form" class="hide-mnemonic">
         <h3 class="">Your Secret</h3>
         <p>We have made you a secret list of words for you. Anyone who has this list of words can claim your bitcoins. 
         <br />
         Make sure you keep a copy of this safe to be sure you can get your bitcoins back.</p>
-        <input class="" id="mnemonic" type="text" placeholder="Your secret words" /><input id="mnemonic-shadow" type="text" value="**** ****** ******* ***** ***** ****** ******* *** *****" />  <a id="show-mnemonic-link" href="#">Show</a> <a id="hide-mnemonic-link" href="#">Hide</a>
+        <input class="" id="mnemonic" type="text" placeholder="Your secret words" /><input id="mnemonic-shadow" readonly type="text" value="" />
+        <br />
+        <a id="hide-mnemonic-link" href="#">Hide</a>
+        <a id="show-mnemonic-link" href="#">Show</a> 
         <!--
         <br />
         <input style="width:500px" class="btn btn-primary" id="confirm-mnemonic-button" value="Use this secret (I've made a copy)" />
         -->
         <br />
-        <input style="" size="50" class="btn btn-primary" id="remember-mnemonic-button" value="Store this secret in your browser" />
-        <input style="" size="60" class="btn btn-primary" id="forget-mnemonic-button" value="Don't store this secret in your browser (more secure)" />
+        <br />
+        Store this in your browser? 
+        <br />
+
+        <input style="" class="btn btn-primary" id="remember-mnemonic-button" value="Yes, store it" />
+        <input style="" class="btn btn-primary" id="forget-mnemonic-button" value="Stop storing it" />
+        <input style="" class="btn btn-primary" id="confirm-mnemonic-button" value="No need, I've got it." />
         <div class="advanced">
         <br />
         <br />
@@ -66,7 +76,7 @@
 
 </div>
 
-<div class="advanced" >
+<div class="advanced needs-mnemonic-confirmation" >
 
 <h3>Sponsor</h3>
 
@@ -89,7 +99,7 @@
 
 </div>
 
-<div class="advanced" >
+<div class="advanced needs-mnemonic-confirmation" >
 
 <form id="make-address-form">
   	<h3 class="">Pay</h3>
@@ -145,7 +155,7 @@
 
 </div>
 
-<div class="">
+<div class="needs-mnemonic-confirmation">
 <form id="address-check-form">
     <h3>Pay</h3>
     Address <input id="funding-address" class="funding-address" type="text" size="38" /> 
@@ -154,7 +164,7 @@
 </form>
 </div>
 
-<div>
+<div class="needs-mnemonic-confirmation">
 <form id="claim-form">
     <h3>Claim funds</h3>
     <div class="advanced">
@@ -167,7 +177,7 @@
 </div>
 
 
-    <div class="advanced-toggle">
+    <div class="advanced-toggle needs-mnemonic-confirmation">
     <hr />
     <a href="#" class="basic" id="show-advanced">Show detail</a>
     <a href="#" class="advanced" id="hide-advanced">Hide detail</a>

@@ -26,24 +26,23 @@ $(function() {
 
     $('#site-resource-id').val(site_resource_id);
 
-    if ($('body').hasClass('claim-page')) {
-        index.initialize_page();
-        return;
-    }
-
     var url = 'resources/?id=' + site_resource_id;
     $.ajax({
         url: url,
         type: 'GET',
         dataType: 'json'
     }).done( function(data) {
+        // NB Only the title will exist on the claim page. 
+        // That's OK, jquery doesn't mind applying things to zero elements.
+        $('#title').text(data['title']); 
         $('#user_id').val(data['user_id']); 
         $('#activity').val(data['activity']); 
         $('#measurement').val(data['measurement']); 
         $('#goal').val(data['goal']); 
         $('#settlement_date').val(data['settlement_date']); 
         $('#setting_default_days_in_future').val(data['setting_default_days_in_future']);
-        index.initialize_page();
+        $('#our-pub-key').val(data['sponsored_pubkey']);
+        main.initialize_page();
     }).fail( function(data) {
         alert('Could not fetch information about this from the site. Please try again later.');
         return;
