@@ -7,10 +7,7 @@ settings.pubkey_record_store = 'contract/?cmd=store';
 settings.pubkey_record_query = 'contract/?cmd=query';
 
 settings.query_livenet = 'blockchain';
-//query_livenet = 'blockr';
-
-//settings.pushtx_livenet = 'eligius';
-settings.pushtx_livenet = 'both';
+settings.pushtx_livenet = 'blockchain';
 //settings.pushtx_livenet = 'none';
 //pushtx_livenet = 'none';
 //pushtx_livenet = 'blockchain';
