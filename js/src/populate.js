@@ -1,3 +1,13 @@
+/*
+This script populates the page for a contract based on an ID paramter in the URL.
+Once the page is populated so it knows what contract it should represeet, it calls
+initialize_page()
+
+If you prefer to generate the index.html page dynamically you can populate the form on the server-side.
+In that case you can delete everything here except the call to 
+initialize_page()
+*/
+
 function getParameterByName(name) {
     name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
     var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
@@ -8,12 +18,15 @@ function getParameterByName(name) {
 $(function() {
     var site_resource_id = parseInt(getParameterByName('id'));
     if (!site_resource_id) {
+        // If there's no site_resource_id we'll need the user to fill in the form.
+        // This makes the form a standard feature which should never be hidden, not an advanced one.
         $('#create-reality-key-form').closest('div').removeClass('advanced');
         return;
     }
 
+    $('#site-resource-id').val(site_resource_id);
+
     if ($('body').hasClass('claim-page')) {
-        $('#site-resource-id').val(site_resource_id);
         index.initialize_page();
         return;
     }
@@ -30,7 +43,6 @@ $(function() {
         $('#goal').val(data['goal']); 
         $('#settlement_date').val(data['settlement_date']); 
         $('#setting_default_days_in_future').val(data['setting_default_days_in_future']);
-        $('#site-resource-id').val(site_resource_id);
         index.initialize_page();
     }).fail( function(data) {
         alert('Could not fetch information about this from the site. Please try again later.');
