@@ -341,12 +341,14 @@
                 //var url = (network == 'testnet') ? 'https://tbtc.blockr.io/api/v1/tx/push' : 'https://btc.blockr.io/api/v1/tx/push';
                 var url = null;
                 var tx_data = {};
+                var data_type = 'json';
                 if (network == 'testnet') {
                     url = 'https://tbtc.blockr.io/api/v1/tx/push';
                     tx_data['hex'] = txHex;
                 } else {
                     url = 'https://blockchain.info/pushtx?cors=true';   
                     tx_data['tx'] = txHex;
+                    data_type = 'text';
                 }
                 $.ajax({
                     type: "POST",
@@ -356,19 +358,14 @@
                         //console.log(response);
                         if (network == 'testnet') {
                             var txid = response['data'];
-                            if (network == 'livenet' && settings.pushtx_livenet == 'both') {
-                                // submit direct to eligius just to be sure...
-                                eligius_cross_domain_post(txHex);
-                            }
                             c['claim_txid'] = txid;
-                            save_contract(c, true);
                         }
                     },
                     error: function ( response ) {
                         bootbox.alert('Sending transaction failed.');
                         //console.log(response);
                     },
-                    dataType: 'json', 
+                    dataType: data_type, 
                 });
             }
         }
@@ -490,7 +487,10 @@
         var wins_on = 'Yes';
 
         var response;
+
+        // Setting this hidden form field allows you to test with a di
         var override_with_fact_id = parseInt($('#override-with-existing-fact-id').val());
+
         var request_type = 'POST';
         if (override_with_fact_id > 0) {
             url = oracle_api_base + '/runkeeper/'+override_with_fact_id+'/'+oracle_param_string
@@ -533,7 +533,7 @@
             'goal': $('[name=goal]').val(),
             'settlement_date': $('[name=settlement_date]').val(),
             'comparison': 'ge',
-            'objection_period_secs': (24*60*60),
+            'objection_period_secs': $('[name=objection_period_secs]').val(),
             'accept_terms_of_service': 'current',
         };
         register_contract(
@@ -573,6 +573,12 @@
         var dt = new Date();
         dt.setDate(dt.getDate() + days);
         var dt_str = dt.toISOString().slice(0, 10);
+
+        // If there's a value set on load, use that
+        if ( frm.find('[name=settlement_date]').val() != '' ) {
+            dt_str = frm.find('[name=settlement_date]').val();
+        }
+
         frm.find('[name=settlement_date]')
             .val(dt_str)
             .datepicker({"dateFormat": 'yy-mm-dd' });
@@ -608,20 +614,43 @@
             //console.log('not got key');
         } 
 
-        $('#mnemonic-shadow').click( function() {
-            frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
+        $('#mnemonic').click( function(evt) {
+            if (!frm.hasClass('show-mnemonic')) {
+                frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
+                $('#mnemonic').focus();
+            }
         });
-        $('#mnemonic-shadow').focus( function() {
+
+        $('#mnemonic-shadow').click( function(evt) {
             if (frm.hasClass('show-mnemonic')) {
                 frm.removeClass('show-mnemonic').addClass('hide-mnemonic');
             } else {
                 frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
                 $('#mnemonic').focus();
             }
+            $('#mnemonic').focus();
+            evt.stopPropagation(); // only do whichever was first of click and focus
         });
-        $('#mnemonic').focus( function() {
+        /*
+        $('#mnemonic-shadow').focus( function(evt) {
+            console.log('focus on mnemonic');
+            if (frm.hasClass('show-mnemonic')) {
+                console.log('show-mnemonic is on, hiding');
+                frm.removeClass('show-mnemonic').addClass('hide-mnemonic');
+            } else {
+                frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
+                console.log('show-mnemonic is off, showing');
+                console.log('focusing mnemonic');
+                $('#mnemonic').focus();
+            }
+            evt.stopPropagation(); // only do whichever was first of click and focus
+        });
+        $('#mnemonic').focus( function(evt) {
+            console.log('focus on mnemonic');
             frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
+            evt.stopPropagation(); // only do whichever was first of click and focus
         });
+        */
         $('#show-mnemonic-link').click( function() {
             frm.addClass('show-mnemonic').removeClass('hide-mnemonic');
             $('#mnemonic').focus();
