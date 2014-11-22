@@ -1,6 +1,10 @@
 <?php
 /*
-This is a very simple script to show how a dynamic page might put information into the page ready for Reality Keys to be created for it.
+This is a simple demo to provide information about registered contracts.
+Normally you'd have a database full of these instead of hard-coding them.
+This is pulled into the HTML page in js/src/populate.js
+If you prefer you can produce the HTML pages dynamically on the server-side.
+See js/src/populate.js for more information.
 */
 
 // Pretend this is your database
