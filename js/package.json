@@ -1,0 +1,23 @@
+{
+  "name": "realitykeys-js-example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha",
+    "build-debug": "browserify src/index.js -d -o dist/bundle.js",
+    "build-min": "browserify src/index.js | uglifyjs -c > dist/bundle.min.js",
+    "build": "npm run build-debug && npm run build-min",
+    "watch": "watchify src/index.js -d -o dist/pizza.js -v"
+  },
+  "author": "Edmund Edgar",
+  "license": "MIT",
+  "devDependencies": {
+    "browserify": "^6.3.2",
+    "uglify-js": "^2.4.15",
+    "watchify": "^2.1.1"
+  }
+}
