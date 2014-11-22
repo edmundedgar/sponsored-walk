@@ -19,11 +19,7 @@
     var oracle_param_string = '?accept_terms_of_service=current';
     var runkeeper_profile_base = 'http://www.runkeeper.com/user';
 
-    function assert(val, description) {
-        if (!val) {
-            console.log("ASSERT FAIL: "+description);
-        }
-    }
+    var assert = require('assert');
 
     function runkeeper_url(profile) {
         return runkeeper_profile_base + '/' + profile;
@@ -507,62 +503,6 @@ console.log(c243t_tx_hex_wrong);
 
     }
 
-    function store_athlete(a) {
-
-        athlete_store = {
-            'athletes': {},
-            'default': null
-        }
-
-        athlete_json_str = localStorage.getItem('athlete_store');
-        if (athlete_json_str) {
-            athlete_store = JSON.parse(athlete_json_str);
-        }
-        athlete_store['athletes'][a] = a;
-
-        // Always set the most recently stored to the default
-        athlete_store['default'] = a;
-
-        localStorage.setItem('athlete_store', JSON.stringify(athlete_store));
-
-    }
-
-    // Return a hash of athlete names and true/false for default or not
-    function load_athletes() {
-       //console.log('loading a');
-        athlete_json_str = localStorage.getItem('athlete_store');
-        if (!athlete_json_str) {
-            return [];
-        }
-        var athlete_store = JSON.parse(athlete_json_str);
-        if (!athlete_store['athletes']) {
-            return [];
-        }
-        var default_athlete = athlete_store['default'];
-        ret = {};
-        for (a in athlete_store['athletes']) {
-            var is_default = (a == default_athlete); 
-            ret[a] = is_default; 
-        }
-        return ret;
-
-    }
-
-    function load_default_athlete() {
-
-        athletes = load_athletes();
-        if (athletes.length == 0) {
-            return null;
-        }
-        for (a in athletes) {
-            if (athletes[a]) {
-                return a;
-            }
-        }
-        return null;
-
-    }
-
     function store_key(mnemonic_text, k) {
 
         //console.log("storing:");
@@ -940,46 +880,6 @@ console.log("import import_hash "+import_hash);
         }
     }
 
-
-    function eligius_cross_domain_post(data) {
-
-        // Some browsers sensibly refuse to do http posts from https pages
-        // For now proxy eligius over https to work around this 
-        // If helper.bymycoins.com goes away you may need to restore eligius and tinker with browser settings
-        //var url = 'http://eligius.st/~wizkid057/newstats/pushtxn.php';
-        var url = 'https://helper.bymycoins.com/pushnonstandardtx/pushtxn.php';
-
-        var iframe = document.createElement("iframe");
-        document.body.appendChild(iframe);
-        iframe.style.display = "none";
-
-        // Just needs a unique name, last 16 characters of tx hex should be ok
-        var target_name = 'tx-' + data.substring(data.length-16, data.length); 
-        iframe.contentWindow.name = target_name;
-
-        // construct a form with hidden inputs, targeting the iframe
-        var form = document.createElement("form");
-        form.target = target_name;
-        form.action = url;
-        form.method = "POST";
-
-        var tx_input = document.createElement("input");
-        tx_input.type = "hidden";
-        tx_input.name = 'transaction';
-        tx_input.value = data
-        form.appendChild(tx_input);
-
-        var send_input = document.createElement("input");
-        send_input.type = "hidden";
-        send_input.name = 'send';
-        send_input.value = 'Push' 
-        form.appendChild(send_input);
-
-        document.body.appendChild(form);
-        form.submit();
-
-    }
-
     function execute_claim(to_addr, c, txes, user_privkey, winner_privkey, network) {
 
         var i;
@@ -1013,8 +913,6 @@ console.log("import import_hash "+import_hash);
             if (network == 'livenet' && settings.pushtx_livenet == 'none') {
                 console.log('created but will not broadcast', txHex);
                 return;
-            } else if (network == 'livenet' && settings.pushtx_livenet == 'eligius') {
-                eligius_cross_domain_post(txHex);
             } else {
                 // this will always be testnet until the happy day when bitcore makes our transactions standard
                 //var url = (network == 'testnet') ? 'https://tbtc.blockr.io/api/v1/tx/push' : 'https://btc.blockr.io/api/v1/tx/push';
@@ -1184,6 +1082,70 @@ console.log("in tx_for_claim_execution", c);
         return (prefix == 'tbtc');
     }
 
+    function p2sh_address(data) {
+
+        if (!data['yes_user_pubkey']) return null;
+        if (!data['no_user_pubkey']) return null;
+        if (!data['yes_pubkey']) return null;
+        if (!data['no_pubkey']) return null;
+        console.log("p2sh_address", data);
+        var script = redeem_script(data);
+
+        //var addr = bitcore.Address.fromScript(script, data['network']);
+
+        var scriptPubKey = bitcoin.scripts.scriptHashOutput(script.getHash());
+        console.log(scriptPubKey);
+        var addr = bitcoin.Address.fromOutputScript(scriptPubKey).toString()
+
+
+        return addr.toString();
+
+    }
+
+    function redeem_script(data) {
+
+        var yes_pubkeys = [ data['yes_user_pubkey'], data['yes_pubkey'] ];
+        var no_pubkeys = [ data['no_user_pubkey'], data['no_pubkey'] ];
+        var user_pubkeys = [ data['yes_user_pubkey'], data['no_user_pubkey'] ];
+
+        yes_pubkeys = yes_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+        no_pubkeys = no_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+        user_pubkeys = user_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+
+        var combo1 = scripts.multisigOutput(2, yes_pubkeys);
+        var combo2 = scripts.multisigOutput(2, no_pubkeys);
+        var combo3 = scripts.multisigOutput(2, user_pubkeys);
+
+        var branching_builder = new BranchingBuilder();
+        branching_builder.addSubScript(combo1);
+        branching_builder.addSubScript(combo2);
+        branching_builder.addSubScript(combo3);
+
+        var p2sh_script = branching_builder.script();
+        console.log("redeem script:");
+        console.log(p2sh_script);
+
+        return p2sh_script;
+
+    }
+
+    function key_for_new_seed(seed) {
+        var privateKey = crypto.sha256(seed).toString('hex');
+        var key_buffer = conv(privateKey, {in: 'hex', out: 'buffer'});
+        var big_integer = BigInteger.fromBuffer(key_buffer);
+        var key = new ECKey(big_integer, true);
+        return {
+            'seed': seed,
+            'version': '1.0',
+            'priv': key.toWIF(),
+            'pub': key.pub.toHex(),
+            'user_confirmed_ts': null
+        };
+
+    }
+
+/// NO MORE UI ABOVE THIS LINE
+
     function sharing_url(c, full) {
         var store = c['yes_user_pubkey']+'-'+c['no_user_pubkey']+'-'+c['id']+'-'+testnet_setting_to_prefix(c['is_testnet']);;
         var base = '';
@@ -1287,177 +1249,9 @@ console.log("in tx_for_claim_execution", c);
 
     }
 
-    function key_for_new_seed(seed) {
-        var privateKey = crypto.sha256(seed).toString('hex');
-        var key_buffer = conv(privateKey, {in: 'hex', out: 'buffer'});
-        var big_integer = BigInteger.fromBuffer(key_buffer);
-        var key = new ECKey(big_integer, true);
-        return {
-            'seed': seed,
-            'version': '1.0',
-            'priv': key.toWIF(),
-            'pub': key.pub.toHex(),
-            'user_confirmed_ts': null
-        };
-
-    }
-
-    function p2sh_address(data) {
-
-        if (!data['yes_user_pubkey']) return null;
-        if (!data['no_user_pubkey']) return null;
-        if (!data['yes_pubkey']) return null;
-        if (!data['no_pubkey']) return null;
-console.log("p2sh_address", data);
-        var script = redeem_script(data);
-
-        //var addr = bitcore.Address.fromScript(script, data['network']);
-
-        var scriptPubKey = bitcoin.scripts.scriptHashOutput(script.getHash());
-        console.log(scriptPubKey);
-        var addr = bitcoin.Address.fromOutputScript(scriptPubKey).toString()
-
-
-        return addr.toString();
-
-    }
-
-    function redeem_script(data) {
-
-        var yes_pubkeys = [ data['yes_user_pubkey'], data['yes_pubkey'] ];
-        var no_pubkeys = [ data['no_user_pubkey'], data['no_pubkey'] ];
-        var user_pubkeys = [ data['yes_user_pubkey'], data['no_user_pubkey'] ];
-
-        yes_pubkeys = yes_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-        no_pubkeys = no_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-        user_pubkeys = user_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-
-        var combo1 = scripts.multisigOutput(2, yes_pubkeys);
-        var combo2 = scripts.multisigOutput(2, no_pubkeys);
-        var combo3 = scripts.multisigOutput(2, user_pubkeys);
-
-        var branching_builder = new BranchingBuilder();
-        branching_builder.addSubScript(combo1);
-        branching_builder.addSubScript(combo2);
-        branching_builder.addSubScript(combo3);
-
-        var p2sh_script = branching_builder.script();
-        console.log("redeem script:");
-        console.log(p2sh_script);
-
-        return p2sh_script;
-
-    }
-
-    function update_submittable() {
-        var ok = true;
-        var user_id = $('#user').val();
-        if ( (user_id == '') || ( $('#user').attr('data-validated-user-id') != user_id) ) {
-            ok = false;
-        }
-        if (ok) {
-            //$('#set-goal-submit').removeAttr('disabled');
-            $('body').addClass('athlete-connected');
-        } else {
-            //$('#set-goal-submit').attr('disabled', 'disabled');
-            $('body').removeClass('athlete-connected');
-        }
-        return true;
-    }
-
-    // Check the user is authenticated so Reality Keys can get at their data.
-    // Once they are, set their username in the data-validated-user-id attribute.
-    function validate_user( inpjq ) {
-        var user_id = inpjq.val();
-        if ( (user_id != '') && (inpjq.attr('data-validated-user-id') != user_id ) ) {
-            var url = oracle_api_base + '/runkeeper/user-info-by-id/' + user_id;
-            $.ajax({
-                url: url, 
-                type: 'GET',
-                dataType: 'json', 
-                success: function(data) {
-                    if ( data['status'] == 'success' ) {
-                        inpjq.attr('data-validated-user-id', data['data']['user_id']);
-                        inpjq.attr('data-validated-user-profile', data['data']['profile']);
-                        inpjq.attr('data-validated-user-name', data['data']['name']);
-                        update_goal_text($('#set-goal-form'));
-                    }
-                    update_submittable();
-                },
-                error: function(data) {
-                    update_submittable();
-                }
-            });
-        } else {
-            update_submittable();
-        }
-    }
-
     function url_parameter_by_name(name) {
         var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
         return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
-    }
-
-    function select_to_icon(icon_class, attribute_name, selected_item) {
-        $('.'+icon_class+':not([data-activity='+selected_item+'])').removeClass('selected');
-        $('.'+icon_class+'[data-activity='+selected_item+']').addClass('selected');
-    }
-
-    function update_goal_text(frm) {
-        frm.find('.activity-verb').text( $('#activity').find(':selected').attr('data-verb') );
-        frm.find('.goal-text').text( $('#goal').val() + ' meters' );
-        frm.find('.settlement-date-text').text( formatted_date($('#settlement_date').val()) );
-
-        var charity_display = charity_display_for_form();
-        frm.find('.charity-display-text').text( charity_display );
-
-        var userjq = $('#user');
-        var user = '';
-        if ( userjq.attr('data-validated-user-id') == userjq.val() ) {
-            user = userjq.attr('data-validated-user-name');
-        }
-        var user_text = ( user == '' ) ? '' : ', '+user+',';
-        frm.find('.user-text').text( user_text );
-        var contract_text = {
-            'activity_verb': $('#activity').find(':selected').attr('data-verb'),
-            'goal_text': $('#goal').val() + ' meters',
-            'settlement_date': $('#settlement_date').val(),
-            'charity_display': charity_display,
-            'user': user
-        }
-        $('.contract-title-start').text(formatted_title_start(contract_text, false));
-        $('.contract-title-end').text(formatted_title_end(contract_text, false));
-    }
-
-    function formatted_title_start(ct, past, tweet) {
-        if (past) {
-            txt = ct['user'] + ' swore';
-            if (ct['total_received']) {
-                txt += ' by ' + ct['total_received'] + ' BTC';
-            } 
-            txt += ' to ' + ct['activity_verb'] + ' ' + ct['goal_text'] + ' by '+formatted_date(ct['settlement_date']);  
-            txt = txt.charAt(0).toUpperCase()+txt.substring(1); // capitalize first letter
-            return txt;
-        }
-        var txt = tweet ? '@bymycoins I' : 'I';
-        if (!tweet && ct['user'] != '') {
-            txt += ', '+ct['user'] + ',';
-        }
-        txt += tweet ? ' swear' : ' swear by my coins';
-        txt += ' to ' + ct['activity_verb'] + ' ' + ct['goal_text'] + ' by '+formatted_date(ct['settlement_date']);  
-        return txt;
-    }
-
-    function formatted_title_end(ct, past, tweet) {
-        if (tweet) {
-            return ' or pay ' + ct['charity_display'];
-        } else {
-            return '...or they will go to ' + ct['charity_display'];
-        }
-    }
-
-    function handle_set_goal_form_change() {
-        update_goal_text($('#set-goal-form'));
     }
 
     function register_contract(params, success_callback, fail_callback) {
