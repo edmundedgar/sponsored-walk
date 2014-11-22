@@ -119,14 +119,20 @@ describe('Transaction Cycle', function() {
     it('Formats our unspent outputs appropriately', function() {
         assert(demo_unspent_txes['unspent_outputs'].length == 1, 'demo_unspent_txes has 1 entry');
         assert(demo_unspent_txes['balance'] == 40000, 'demo_unspent_txes has the appropriate balance');
+    }),
+    it('Creates the same transaction each time for the same inputs, thanks to deterministic signatures in bitcoinlib-js', function() {
+        var c243m_tx_hex_2 = realitykeys_utils.hex_for_claim_execution(cash_out_address, no_user_privkey, c243m['winner_privkey'], demo_unspent_txes['unspent_outputs'][0], c243m, 'livenet');
+        assert.equal(c243m_tx_hex, c243m_tx_hex_2, 'Hex should be different each time, due to randomness in signatures');
+    }),
+    it('Creates the expected transaction', function() {
+        // This is this transaction, which was a successful spend on livenet:
+        // https://blockchain.info/tx/50532269225a525179b29e65ea25959c559d2dbd84f828b89e98f74074d74303
+        var c243m_tx_hex_expected = '01000000010343d77440f7989eb828f884bd2d9d559c9525ea659eb27951525a226922535000000000fd720100483045022100de328c41155b7cf28fcbb48dcfe5c737aef7bad905f053ab1cf5662fcf462e8e02205ac70d68cba2c4ecc8ebf6be788a2006ee4531a9406ba6f265c0e62c7312515701483045022100dbd675d398969732d8d65151432a6cd87ad968f40383593debefb77ea98f73c702203152c8f8b049efebf5af9c01843cd29870a247b445c6a26bcea328061eaaae070100514cdb6363522102f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e2103d93547f38370b35471a8ee463b4245d6b1282a0feccce8e149c4ada76d32df1a52ae6752210247e6c3a88d76ab7505c147e5a9bcf0011226f7690081dd728042831f90a391ed210389688a084ff6f83c9ed3c91236e0f46d060cef32da23dfc6fc147fde6af9ca1052ae6867522102f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e210247e6c3a88d76ab7505c147e5a9bcf0011226f7690081dd728042831f90a391ed52ae68ffffffff0130750000000000001976a9148a462b671791d0bfbd8fd0d3987f652258d06dd088ac00000000';
+        assert.equal(c243m_tx_hex, c243m_tx_hex_expected, 'Produces the expected transaction');
     })
-})
-
-
+});
 /*
        return;
-        var c243t_tx_hex_2 = realitykeys_utils.hex_for_claim_execution(cash_out_address, yes_user_privkey, c243t['winner_privkey'], demo_unspent_txes['unspent_outputs'][0], c243t, 'testnet');
-        assert(c243t_tx_hex != c243t_tx_hex_2, 'Hex should be different each time, due to randomness in signatures');
 
         var c243t_tx = realitykeys_utils.tx_for_claim_execution(cash_out_address, yes_user_privkey, c243t['winner_privkey'], demo_unspent_txes[0], c243t);
         var chunks = c243t_tx['ins'][0].getScript().chunks;
@@ -250,30 +256,6 @@ describe('Transaction Cycle', function() {
 
     }
 
-    function test_script_monkey_patches() {
-
-        var a_pub = new Buffer('02d8cb2a0ea3cadc894d19081fb241723f0a69c3819b035d0ae587a11849ba9b28', 'hex');
-        var yes_pub = new Buffer('02585eca9b441b0e17b12145f2d73ac7dd8da1eae7cdb4022db6b78f224db3bdc9', 'hex');
-        var b_pub = new Buffer('0254694936f88db742069686bd964020e3c453120044ae35fb2a91ed556b93e1e7', 'hex');
-        var no_pub = new Buffer('037545a3b495208ba67328773361ca5c0037352839d3c634251b540e91b61e0fd8', 'hex');
-
-        var s = Script.createMultisigGroups( [2,2], [ [a_pub, yes_pub], [b_pub, no_pub] ], {}); 
-        var chunks = s.chunks;
-        assert(chunks.length == 13, '13 chunks in 2-grouip pattern');
-        assert(chunks[0] == Opcode.map.OP_IF, 'chunk 0 OP_IF in 2-group pattern');
-        assert(chunks[1] != Opcode.map.OP_IF, 'chunk 1 OP_IF in 2-group pattern');
-        assert(chunks[chunks.length-1] == Opcode.map.OP_ENDIF, 'last chunk OP_ENDIF in 2-group pattern');
-
-        var s = Script.createMultisigGroups( [2,2,2], [ [a_pub, yes_pub], [b_pub, no_pub], [yes_pub, no_pub] ], {}); 
-        var chunks = s.chunks;
-        //assert(chunks.length == 13, '13 chunks in 2/2 pattern');
-        assert(chunks[0] == Opcode.map.OP_IF, 'chunk 0 OP_IF in 3-group pattern');
-        assert(chunks[1] == Opcode.map.OP_IF, 'chunk 1 OP_IF in 3-group pattern');
-        assert(chunks[chunks.length-1] == Opcode.map.OP_ENDIF, 'last chunk OP_ENDIF in 3-group pattern');
-
-    }
-
-
     function test_bitcoin_utils.format_unspent_response() {
         var demo_unspent_blockr = {
             "status": "success",
@@ -338,21 +320,6 @@ describe('Transaction Cycle', function() {
         assert(data['unspent_outputs'][0]['tx_hash_big_endian'] == "91b7684656c3ea3f8aa22bb5246721d691295c8b0813f40cba58b29268760d33", 'txid is called tx_hash_big_endian');
         assert(data['unspent_outputs'][0]['value'] == 20000, 'amount is returned in satoshis');
         assert(data['balance'] == 200000, 'balance is provided and in satoshis');
-
-    }
-    */
-
-
-    /*
-    function run_tests() {
-
-        test_bitcoin_utils.format_unspent_response();
-        test_format_sanitization();
-        test_hash_to_contract();
-        test_mnemonic_handling();
-        test_transaction_cycle();
-        test_script_monkey_patches();
-        console.log('All tests complete');
 
     }
     */
