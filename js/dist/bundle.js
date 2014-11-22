@@ -7181,8 +7181,266 @@ BranchingTransactionBuilder.prototype.selectInputBranch = function(index, branch
 
 module.exports = BranchingTransactionBuilder
 
-},{"assert":1,"bitcoinjs-lib":115}],55:[function(require,module,exports){
-(function (Buffer){
+},{"assert":1,"bitcoinjs-lib":118}],55:[function(require,module,exports){
+var bitcoin = require('bitcoinjs-lib');
+var conv = require('binstring'); // TODO: Can probably get this functionality from elsewhere
+var crypto = bitcoin.crypto;
+
+var ECPubKey = bitcoin.ECPubKey;
+var ECKey = bitcoin.ECKey;
+var TransactionBuilder = bitcoin.TransactionBuilder;
+var scripts = bitcoin.scripts;
+var BranchingBuilder = require('./../lib/branching_transaction_builder');
+var Address = bitcoin.Address;
+var BIP39 = require('bip39');
+var BigInteger = require('bigi');
+
+var assert = require('assert');
+
+
+
+exports.format_pubkey = function(txt) {
+    txt = txt.toLowerCase();
+    // TODO: If passed uncompressed keys, compress them instead of failing
+    if (/[0-9a-f]{66}/.test(txt)) {
+        return txt;
+    } else {
+        return null;
+    }
+}
+
+exports.format_network = function(txt) {
+    if (txt == 'testnet') {
+        return 'testnet';
+    }
+    if (txt == 'livenet') {
+        return 'livenet';
+    }
+    return null;
+}
+
+exports.satoshis_to_display_format = function(satoshis) {
+    return satoshis / 100000000;
+}
+
+exports.format_address = function(txt) {
+    // NB We allow any prefix to allow for various alt-coins and things
+    if (/[0-9A-Za-z]{20,40}/.test(txt)) {
+        return txt;
+    } else {
+        return null;
+    }
+}
+
+// We use blockr for testnet and blockchain.info for livenet.
+// These return unspent outputs in different formats, reformat for what we need
+exports.format_unspent_response = function(response, format, addr) {
+
+    var ret = {
+            'balance': 0,
+            'unspent_outputs': []
+    };
+    if (format == 'blockr') {
+        var data = response['data'];
+
+        // Unspent with only one argument returns an object
+        if (data.hasOwnProperty('address')) {
+            data = [data];
+        }
+        for(var i=0; i<data.length; i++) {
+            for (var j=0; j<data[i]['unspent'].length; j++) {
+                var o_in = data[i]['unspent'][j];
+                var o_out = {
+                    'tx_hash_big_endian': o_in['tx'],
+                    'value': o_in['amount'] * 100000000,
+                    'tx_output_n': o_in['n'],
+                    'script': o_in['script'],
+                    'address': addr
+                }
+                ret['unspent_outputs'].push(o_out);
+                ret['balance'] = ret['balance'] + o_out['value'];
+            }
+        }
+    } else {
+        var data = response['unspent_outputs'];
+        for(var i=0; i<data.length; i++) {
+            var o_in = data[i];
+            var o_out = {
+                'tx_hash_big_endian': o_in['tx_hash_big_endian'],
+                'value': o_in['value'],
+                'tx_output_n': o_in['tx_output_n'],
+                'script': o_in['script'],
+                'address': addr
+            }
+            ret['unspent_outputs'].push(o_out);
+            ret['balance'] = ret['balance'] + o_out['value'];
+        }
+    }
+    return ret; 
+
+}
+
+exports.key_for_new_seed = function(seed) {
+    var privateKey = crypto.sha256(seed).toString('hex');
+    var key_buffer = conv(privateKey, {in: 'hex', out: 'buffer'});
+    var big_integer = BigInteger.fromBuffer(key_buffer);
+    var key = new ECKey(big_integer, true);
+    return {
+        'seed': seed,
+        'version': '1.0',
+        'priv': key.toWIF(),
+        'pub': key.pub.toHex(),
+        'user_confirmed_ts': null
+    };
+}
+
+
+},{"./../lib/branching_transaction_builder":54,"assert":1,"bigi":62,"binstring":64,"bip39":65,"bitcoinjs-lib":118}],56:[function(require,module,exports){
+var assert = require('assert');
+
+exports.store_contract = function(c, is_update, success_callback, fail_callback) {
+
+    //console.log("storing:");
+    //console.log(c);
+    contract_store = {
+        'contracts': {},
+        'default': null
+    }
+
+    // We sometimes have a lot of data here - just store the bare minimum to recreate the contract
+    var storeme = {};
+    storeme['yes_user_pubkey'] = c['yes_user_pubkey'];
+    storeme['no_user_pubkey'] = c['no_user_pubkey'];
+    storeme['address'] = c['address'];
+    storeme['id'] = c['id'];
+
+    p2sh_addr = c['address'];
+    contract_json_str = localStorage.getItem('contract_store');
+    if (contract_json_str) {
+        contract_store = JSON.parse(contract_json_str);
+    }
+    if (!is_update) {
+        if (contract_store['contracts'][p2sh_addr]) {
+            return; // Already there
+        }
+    }
+    //contract_store['contracts'][p2sh_addr] = storeme;
+    contract_store['contracts'][p2sh_addr] = c;
+    contract_store['default'] = p2sh_addr;
+
+    localStorage.setItem('contract_store', JSON.stringify(contract_store));
+
+}
+
+exports.is_contract_stored = function(p2sh_addr) {
+
+    contract_json_str = localStorage.getItem('contract_store');
+    if (!contract_json_str) {
+        return false;
+    }
+    contract_store = JSON.parse(contract_json_str);
+    if (contract_store['contracts'][p2sh_addr]) {
+        return true; // Already there
+    }
+    return false;
+
+}
+
+exports.store_key = function(mnemonic_text, k) {
+
+    //console.log("storing:");
+    //console.log(k);
+    var key_store = {
+        'mnemonics': {},
+        'default': null
+    }
+
+    var key_json_str = localStorage.getItem('key_store');
+    if (key_json_str) {
+        key_store = JSON.parse(key_json_str);
+    }
+    key_store['mnemonics'][mnemonic_text] = k;
+    key_store['default'] = mnemonic_text;
+    //console.log(JSON.stringify(key_store));
+
+    localStorage.setItem('key_store', JSON.stringify(key_store));
+    return true;
+
+}
+
+exports.stored_priv_for_pub = function(pub) {
+
+    var key_json_str = localStorage.getItem('key_store');
+    if (key_json_str == '') {
+        return null;
+    }
+    key_store = JSON.parse(key_json_str);
+    mnemonics = key_store['mnemonics'];
+    for (var m in mnemonics) {
+        if (!mnemonics.hasOwnProperty(m)) {
+            continue;
+        }
+        var k = mnemonics[m];
+        if (k['pub'] == pub) {
+            return k['priv'];
+        }
+        console.log("no match for pub ",pub, k['pub']);
+        //console.log("no match for "+pub+": "+k['pub']);
+        //console.log(k);
+    }
+    return null;
+
+}
+
+exports.default_stored_mnemnonic = function() {
+    key_json_str = localStorage.getItem('key_store');
+    if (key_json_str) {
+        var key_store = JSON.parse(key_json_str);
+        return key_store['default'];
+    }
+    return null;
+
+}
+
+exports.delete_stored_key = function(mnemonic) {
+
+    key_json_str = localStorage.getItem('key_store');
+    if (key_json_str) {
+        var key_store = JSON.parse(key_json_str);
+        console.log('before: ',key_store['mnemonics']);
+        delete key_store['mnemonics'][mnemonic];
+
+        var others_left = false;
+        for (sd in key_store['mnemonics']) {
+            if (key_store['mnemonics'].hasOwnProperty(sd)) {
+                others_left = true;
+                break;
+            }
+        }
+        if (others_left) {
+            localStorage.setItem('key_store', JSON.stringify(key_store));
+        } else {
+            localStorage.removeItem('key_store');
+        }
+    }
+    return null;
+
+}
+
+exports.load_stored_key = function(mnemonic) {
+    key_json_str = localStorage.getItem('key_store');
+    if (key_json_str) {
+        //console.log("got key store");
+        var key_store = JSON.parse(key_json_str);
+        if (key_store['mnemonics'][mnemonic]) {
+            return key_store['mnemonics'][mnemonic];
+        } 
+    }
+    return null;
+
+}
+
+},{"assert":1}],57:[function(require,module,exports){
 
     var settings = require('./settings');
 
@@ -7202,418 +7460,14 @@ module.exports = BranchingTransactionBuilder
     var oracle_api_base = settings.oracle_base + '/api/v1';
     var oracle_view_base = settings.oracle_base + '/runkeeper/';
     var oracle_param_string = '?accept_terms_of_service=current';
-    var runkeeper_profile_base = 'http://www.runkeeper.com/user';
 
-    function assert(val, description) {
-        if (!val) {
-            console.log("ASSERT FAIL: "+description);
-        }
-    }
+    var assert = require('assert');
 
-    function runkeeper_url(profile) {
-        return runkeeper_profile_base + '/' + profile;
-    }
+    var bitcoin_utils = require('./bitcoin_utils');
+    var realitykeys_utils = require('./realitykeys_utils');
+    var storage = require('./contract_storage');
 
-    // Return sanitized pubkey, or null if it doesn't look like a proper pubkey
-    // TODO: If we get uncompressed stuff here, compress it.
-    function format_pubkey(txt) {
-        txt = txt.toLowerCase();
-        // TODO: If passed uncompressed keys, compress them instead of failing
-        if (/[0-9a-f]{66}/.test(txt)) {
-            return txt;
-        } else {
-            return null;
-        }
-    }
-
-    function satoshis_to_display_format(satoshis) {
-        return satoshis / 100000000;
-    }
-
-    function format_fact_id(txt) {
-        return parseInt(txt) + '';
-    }
-
-    function format_address(txt) {
-        // NB We allow any prefix to allow for various alt-coins and things
-        if (/[0-9A-Za-z]{20,40}/.test(txt)) {
-            return txt;
-        } else {
-            return null;
-        }
-    }
-
-    function test_format_sanitization() {
-
-        var addr = format_address('thing%thing');
-        assert((addr == null), 'script tags addr format to null');
-        assert((format_address('1923abcdez92') == null) , 'base 58 check less than 20 chars fails');
-        var valid_addr = '01234567891232323201234567892323232';
-        assert(valid_addr == format_address(valid_addr) , 'base 58 check returns orig address if pattern generally ok');
-        assert(format_pubkey('abcdj') == null, 'pubkey with non-hex characters returns null' );
-
-        assert(format_pubkey('A0B0C0D0E0') == null, 'pubkey with non-hex characters returns null' );
-        var valid_pubkey = '02d8cb2a0ea3cadc894d19081fb241723f0a69c3819b035d0ae587a11849ba9b28';
-        assert(valid_pubkey == format_pubkey(valid_pubkey), 'valid pubkey returns sanitized identically');
-
-        assert(valid_pubkey == format_pubkey('02D8CB2A0Ea3cadc894d19081fb241723f0a69c3819b035d0ae587a11849ba9b28'), 'capital letters in hex come back lower-cased');
-
-    }
-
-    function test_mnemonic_handling() {
-
-        var mnemonic = BIP39.generateMnemonic() 
-        var words = mnemonic.split(' ');
-
-        //var mne = new Mnemonic(128);
-        //var words = mne.toWords();
-        //var mne_hex = mne.toHex();
-        assert(words.length == 12, '128-bit mnemonic makes 12 words');
-        return;
-
-        var mne2 = new Mnemonic(128);
-        var mne2_hex = mne2.toHex()
-
-        assert( (mne_hex != mne2_hex), 'Mnemonic makes a different hex result every time');
-
-        var fixed_words = ["love", "ache", "bother", "cross", "fought", "swim", "brave", "rare", "hey", "neither", "paint", "bought"];
-
-        var fixed_hex = '19958d7ae02536984de76050569555c1';
-        var fixed_mne = new Mnemonic(fixed_words);
-        assert( fixed_mne.toHex() == fixed_hex, 'Mnemonic loaded from previous output returns the same hex as before');
-
-        var round_trip_mne = seed_to_mnemonic(fixed_hex);
-        assert( fixed_words.join(' ') == round_trip_mne.toWords().join(' '), 'Mnemonic can be recreated from seed');
-
-        var dodgy_words = [
-            'asdf1', 'asdf2', 'asdf3', 'asdf4', 'asdf5', 'asdf6', 'asdf7', 'asdf8', 'asdf9', 'asdf10', 'asdf11', 'asdf12'
-        ];
-        var dodgy_mne = new Mnemonic(dodgy_words);
-        assert(('ffffffffffffffffffffffffffffffff' == dodgy_mne.toHex()), 'Fed words it does not understand Mnemonic returns ffffffffffffffffffffffffffffffff');
-        
-    }
-
-    function test_hash_to_contract() {
-
-        var a_pub = '02d8cb2a0ea3cadc894d19081fb241723f0a69c3819b035d0ae587a11849ba9b28';
-        var b_pub = '0254694936f88db742069686bd964020e3c453120044ae35fb2a91ed556b93e1e7';
-        var fact_id = '2';
-
-        assert(hash_to_contract('asdf') == null, 'Badly formatted hash returns null');
-
-        var valid_hash = '#' + a_pub + '-' + b_pub + '-' + fact_id + '-' + 'tbtc';
-        var c = hash_to_contract(valid_hash);
-        assert(c != null, 'Valid hash produces non-null contract object');
-        assert(c['yes_user_pubkey'] == a_pub, 'Item 1 in hash produces contract object with yes_user_pubkey');
-        assert(c['no_user_pubkey'] == b_pub, 'Item 2 in hash produces contract object with no_user_pubkey');
-        assert(c['id'] == fact_id, 'Item 3 produces contract object with correct fact id');
-        assert(c['is_testnet'], 'Item 4 as tbtc produces is_testnet as true');
-
-        var valid_hash_2 = '#' + a_pub + '-' + b_pub + '-' + fact_id + '-' + 'btc';
-        var c2 = hash_to_contract(valid_hash_2);
-        assert(!c2['is_testnet'], 'Item 4 as not tbtc produces is_testnet as false');
-
-    }
-
-    function test_script_monkey_patches() {
-
-        var a_pub = new Buffer('02d8cb2a0ea3cadc894d19081fb241723f0a69c3819b035d0ae587a11849ba9b28', 'hex');
-        var yes_pub = new Buffer('02585eca9b441b0e17b12145f2d73ac7dd8da1eae7cdb4022db6b78f224db3bdc9', 'hex');
-        var b_pub = new Buffer('0254694936f88db742069686bd964020e3c453120044ae35fb2a91ed556b93e1e7', 'hex');
-        var no_pub = new Buffer('037545a3b495208ba67328773361ca5c0037352839d3c634251b540e91b61e0fd8', 'hex');
-
-        var s = Script.createMultisigGroups( [2,2], [ [a_pub, yes_pub], [b_pub, no_pub] ], {}); 
-        var chunks = s.chunks;
-        assert(chunks.length == 13, '13 chunks in 2-grouip pattern');
-        assert(chunks[0] == Opcode.map.OP_IF, 'chunk 0 OP_IF in 2-group pattern');
-        assert(chunks[1] != Opcode.map.OP_IF, 'chunk 1 OP_IF in 2-group pattern');
-        assert(chunks[chunks.length-1] == Opcode.map.OP_ENDIF, 'last chunk OP_ENDIF in 2-group pattern');
-
-        var s = Script.createMultisigGroups( [2,2,2], [ [a_pub, yes_pub], [b_pub, no_pub], [yes_pub, no_pub] ], {}); 
-        var chunks = s.chunks;
-        //assert(chunks.length == 13, '13 chunks in 2/2 pattern');
-        assert(chunks[0] == Opcode.map.OP_IF, 'chunk 0 OP_IF in 3-group pattern');
-        assert(chunks[1] == Opcode.map.OP_IF, 'chunk 1 OP_IF in 3-group pattern');
-        assert(chunks[chunks.length-1] == Opcode.map.OP_ENDIF, 'last chunk OP_ENDIF in 3-group pattern');
-
-    }
-
-    function test_transaction_cycle() {
-
-        var yes_user_mnemonic = 'spider bus panic airport daring iron gloom current prize bonus witness hair';
-        var yes_user_seed = BIP39.mnemonicToSeedHex(yes_user_mnemonic);
-        var yes_user_privkey_obj = key_for_new_seed(yes_user_seed);
-        var yes_user_privkey = yes_user_privkey_obj['priv']
-        var yes_user_pubkey = yes_user_privkey_obj['pub']
-        assert(yes_user_pubkey == '02f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e', 'Yes user pubkey as expected');;
-
-        var no_user_mnemonic = 'apology dove vessel defy apology unusual piano flush health polar bleak report';
-        var no_user_seed = BIP39.mnemonicToSeedHex(no_user_mnemonic);
-        var no_user_key_obj = key_for_new_seed(no_user_seed);
-        var no_user_privkey = no_user_key_obj['priv'];
-        var no_user_pubkey = no_user_key_obj['pub'];
-        assert(no_user_pubkey == '0247e6c3a88d76ab7505c147e5a9bcf0011226f7690081dd728042831f90a391ed', 'No user pubkey as expected');
-
-        var cash_out_address = '1Dc8JwPsxxwHJ9zX1ERYo9q7NQA9SRLqbC';
-
-        // The following are previously-settled Reality Keys runkeeper facts
-        // The resulting object should be the same as what you would get if you fetched the json from the api
-
-        // https://www.realitykeys.com/api/v1/runkeeper/243/?accept_terms_of_service=current
-        var no_fact = {"no_pubkey": "0389688a084ff6f83c9ed3c91236e0f46d060cef32da23dfc6fc147fde6af9ca10", "user_profile": "edochan", "settlement_date": "2014-09-23", "objection_period_secs": 604800, "human_resolution_scheduled_datetime": null, "measurement": "total_distance", "evaluation_method": "ge", "is_user_authenticated": true, "objection_fee_satoshis_paid": 0, "machine_resolution_scheduled_datetime": "2014-09-23 00:00:00", "user_id": "29908850", "goal": "4000", "created_datetime": "2014-07-19 03:34:22", "winner": "No", "value": "4000", "id": 243, "source": "runkeeper", "yes_pubkey": "03d93547f38370b35471a8ee463b4245d6b1282a0feccce8e149c4ada76d32df1a", "activity": "running", "objection_fee_satoshis_due": 1000000, "user_name": "edochan", "winner_privkey": "L3MRgBTuEtfvEpwb4CcGtDm4s79fDR8UK1AhVYcDdRL4pRpsy686"};
-
-        // https://www.realitykeys.com/api/v1/runkeeper/252/?accept_terms_of_service=current
-        var yes_fact = {"no_pubkey": "0309fee1726ed80f80869951de4b77115b1be64b77317c80b1f5f09cc9a78c978d", "user_profile": "edochan", "settlement_date": "2014-07-19", "objection_period_secs": 86400, "human_resolution_scheduled_datetime": null, "measurement": "cumulative_distance", "evaluation_method": "ge", "is_user_authenticated": true, "objection_fee_satoshis_paid": 0, "machine_resolution_scheduled_datetime": "2014-07-19 00:00:00", "user_id": "29908850", "goal": "100", "created_datetime": "2014-07-19 03:54:33", "winner": "Yes", "value": "100", "id": 244, "source": "runkeeper", "yes_pubkey": "0309992b4062fc9cb29e681fef394f88182a49e31a6a859a10be38664603a43fe7", "activity": "walking", "objection_fee_satoshis_due": 1000000, "user_name": "edochan", "winner_privkey": "L3k6Qy7SYXSLs93Bcf7YfQJsjFeDy4oLgFuMtstfwZkFSAckEdwf"};
-
-
-        // testnet contract for fact 243 (yes)
-        var c243t = no_fact; // NB This will have more fields filled than we would have in reality
-        c243t['yes_user_pubkey'] = yes_user_pubkey;
-        c243t['no_user_pubkey'] = no_user_pubkey;
-        c243t['network'] = 'testnet';
-
-        // old method with only the two groups and no user+user unlocking
-        //var c243t_fund_address = p2sh_address(c243t, false);
-        //assert('2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU' == c243t_fund_address, 'fact 243 gives us the expected funding address');
-
-        c243t_fund_address = p2sh_address(c243t);
-        assert('2N18JYb5iuyjHqi3c8fwGQwVzntvYTH99Mk' == c243t_fund_address, 'fact 243 gives us the expected funding address with the extra user-user branch on testnet');
-
-        // mainnet version of the same thing
-        var c243m = c243t;
-        c243m['network'] = 'livenet';
-        var c243m_fund_address = p2sh_address(c243m)
-        c243m['address'] = c243m_fund_address;
-        assert(c243m_fund_address != c243t_fund_address, 'Without testnet flag p2sh address is different to testnet version');
-        assert('39a6Ur9hJXDwdvR4TYKPnzWjaYiNfZ4Zxp' == c243m_fund_address, 'fact 243 gives us the expected funding address with the extra user-user branch on livenet');
-        // Normally we would pull the balance from blockchain.info.
-        // We then use it to populate the balance field of the contract
-        //c243t['balance'] = ;
-
-        var demo_unspent_blockchain = {
-            "unspent_outputs":[
-                {
-                    "tx_hash":"0343d77440f7989eb828f884bd2d9d559c9525ea659eb27951525a2269225350",
-                    "tx_hash_big_endian":"50532269225a525179b29e65ea25959c559d2dbd84f828b89e98f74074d74303",
-                    "tx_index":69269456,
-                    "tx_output_n": 0,   
-                    "script":"a9145671e6049b22779f46a70a4ab6d927963f1faf3787",
-                    "value": 40000,
-                    "value_hex": "009c40",
-                    "confirmations":0
-                }
-              
-            ]
-        };
-
-        var demo_unspent_txes = format_unspent_response(demo_unspent_blockchain, 'blockchain', c243m_fund_address);
-        assert(demo_unspent_txes['unspent_outputs'].length == 1, 'demo_unspent_txes has 1 entry');
-        assert(demo_unspent_txes['balance'] == 40000, 'demo_unspent_txes has the appropriate balance');
-        var c243m_tx_hex = hex_for_claim_execution(cash_out_address, no_user_privkey, c243m['winner_privkey'], demo_unspent_txes['unspent_outputs'][0], c243m, 'livenet');
-        return;
-        var c243t_tx_hex_2 = hex_for_claim_execution(cash_out_address, yes_user_privkey, c243t['winner_privkey'], demo_unspent_txes['unspent_outputs'][0], c243t, 'testnet');
-        assert(c243t_tx_hex != c243t_tx_hex_2, 'Hex should be different each time, due to randomness in signatures');
-
-        var c243t_tx = tx_for_claim_execution(cash_out_address, yes_user_privkey, c243t['winner_privkey'], demo_unspent_txes[0], c243t);
-        var chunks = c243t_tx['ins'][0].getScript().chunks;
-        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
-        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(81 == chunks[3].toString(), 'after sigs we have a 1');
-        assert(81 == chunks[4].toString(), 'after sigs we have another 1 for the first branch');
-        assert(chunks[5].toString('hex').length > 100, 'ends with a big old redeem script');
-        
-        /*
-        TODO: Work out how to propagate the errors for this
-        try {
-            var c243t_tx_hex_wrong = hex_for_claim_execution(cash_out_address, no_user_privkey, c243t['winner_privkey'], demo_unspent_txes[0], c243t);
-console.log(c243t_tx_hex_wrong);
-            assert(false, 'Trying to claim with the wrong key combination should raise an error');
-        } catch( err) {
-            assert(true, 'Trying to claim with the wrong key combination should raise an error');
-        }
-        */
-
-
-        var c243t_tx_user = tx_for_claim_execution(cash_out_address, yes_user_privkey, no_user_privkey, demo_unspent_txes[0], c243t);
-        var chunks = c243t_tx_user['ins'][0].getScript().chunks;
-        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
-        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(0 == chunks[3].toString(), 'after sigs we have a noop');
-        assert(chunks[4].toString('hex').length > 100, 'ends with a big old redeem script');
-
-
-
-        // testnet contract for fact 243 (yes)
-        var c252t = no_fact; // NB This will have more fields filled than we would have in reality
-        c252t['is_testnet'] = true;
-        c252t['yes_user_pubkey'] = yes_user_pubkey;
-        c252t['no_user_pubkey'] = no_user_pubkey;
-        c252t['is_testnet'] = true;
-
-        // old method with only the two groups and no user+user unlocking
-        //var c252t_fund_address = p2sh_address(c252t, false);
-        //assert('2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU' == c252t_fund_address, 'fact 252 gives us the expected funding address');
-
-        c252t_fund_address = p2sh_address(c252t);
-        assert('2Mtr3ge4kcA8rffWQdwfkcEYfuzyZJ956A2' == c252t_fund_address, 'fact 252 gives us the expected funding address with the extra user-user branch');
-        assert(c243t_fund_address != c252t_fund_address, 'Yes fact produces a different funding address to a different no fact');
-
-        // mainnet version of the same thing
-        var c252t_tx_hex = hex_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
-        var c252t_tx_hex_2 = hex_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
-        assert(c252t_tx_hex != c252t_tx_hex_2, 'Hex should be different each time, due to randomness in signatures');
-
-        var c252t_tx = tx_for_claim_execution(cash_out_address, no_user_privkey, c252t['winner_privkey'], demo_unspent_txes[0], c252t);
-        var chunks = c252t_tx['ins'][0].getScript().chunks;
-        assert(0 == chunks[0].toString(), 'sig starts with an OP_0 for a buggy CHECK_MULTISIG to munch on');
-        assert(chunks[1].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(chunks[2].toString('hex').length > 50, 'first sig > 50 chars (TODO: when lib gets deterministic k, check expected val');
-        assert(0 == chunks[3].toString(), 'after sigs we have a 1');
-        assert(81 == chunks[4].toString(), 'after sigs we have a 0 for the first branch');
-        assert(chunks[5].toString('hex').length > 100, 'ends with a big old redeem script');
- 
-        //console.log("Made hex:");
-        //console.log(c243t_tx_hex);
-
-        // Sending this resulted in:
-        // txid: '5b834f6c1d750f60deec7c83da918832d55f9c290429c838df734f9ed2a32a3c'
-        // raw tx: '0100000001efc0e2c1179de276b4097849965752169383df565b57464df296832655c5ebde00000000fd2501004730440220795bf7bc4529f2ffcdd625d9eb2e3769b9ce3eee7cca2b0d6c868bbc1ea34dd502206dc62551a96f9c43f4e0eaa288db65a27efd9dc529c45b2d2485f1966ce205ca01473044022003fcb9e1eeac11fd4c1a2696cdcdc2f1f1e81e1501cc5d56113d18888986df800220290d43ce410bd445b3ea25916eb4799ed702dfb9394bf954442d13213c6523c601514c9163522103b1e8aba06d96273de138cb8f672ef93b3bdefd9dc18d6c038e4eb8a766778ad32103ef92fd0593af4e10de665d1b25703a76af84349becdf6830b290a010db83746052ae6752210213e0a3f741cd305571366ee3d30bfd819bd95b6f0d8dea0ee13a10dc3f6cf4e62103ead85d26a8339abffabe420a5cc23d9a12a0d005a7d248c80c0d43cf969236e352ae68ffffffff01301b0f00000000001976a9147906f703d0774e8f4b2fb0b716b6352e86687dfc88ac00000000'
-
-    }
-
-    function test_format_unspent_response() {
-        var demo_unspent_blockr = {
-            "status": "success",
-            "data": {
-                "address": "2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU",
-                "unspent": [
-                    {
-                        "tx": "deebc555268396f24d46575b56df839316525796497809b476e29d17c1e2c0ef",
-                        "amount": "0.01000000",
-                        "n": 0,
-                        "confirmations": 1,
-                        "script": "a914728b52d98256323232481fa1eff352dfbcb2f78687"
-                    },
-                    {
-                        "tx": "aaf895c26bd32b4fb575b878ad51b7d189edfdd425f95a8026c24de8d93b98c1",
-                        "amount": "0.02000000",
-                        "n": 1,
-                        "confirmations": 1,
-                        "script": "a914728b52d98256323232481fa1eff352dfbcb2f78687"
-                    }
-                ],
-                "with_unconfirmed": true
-            },
-            "code": 200,
-            "message": ""
-        };
-        var data = format_unspent_response(demo_unspent_blockr, 'blockr', '2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU');
-        console.log(data);
-        assert(data['balance'] == (0.01000000 + 0.02000000) * 100000000, 'balance is returned per address in satoshis' );
-        assert(data['unspent_outputs'].length == 2, 'right number of outputs per address');
-        assert(data['unspent_outputs'][0]['tx_hash_big_endian'] == "deebc555268396f24d46575b56df839316525796497809b476e29d17c1e2c0ef", 'txid is called tx_hash_big_endian');
-        assert(data['unspent_outputs'][0]['value'] == (0.01*100000000), 'amount is returned in satoshis');
-        assert(data['unspent_outputs'][0]['address'] == '2N3gsvXbFd5UmjPTwHy1gNyLQ8SXPqMVqrU', 'address is supplied as passed in');
-
-        var demo_unspent_blockchain = {
-                "unspent_outputs":[
-                    {
-                        "tx_hash":"330d766892b258ba0cf413088b5c2991d6216724b52ba28a3feac3564668b791",
-                        "tx_hash_big_endian":"91b7684656c3ea3f8aa22bb5246721d691295c8b0813f40cba58b29268760d33",
-                        "tx_index":68669031,
-                        "tx_output_n": 1,   
-                        "script":"a9143b4d47a33bb98347e6e7f200c64cbab64d08576687",
-                        "value": 20000,
-                        "value_hex": "4e20",
-                        "confirmations":713
-                    },
-                    {
-                        "tx_hash":"a03facd648062b60c2855ba1b8196d38297c213f7d3753e507e126bb67bed6fb",
-                        "tx_hash_big_endian":"fbd6be67bb26e107e553377d3f217c29386d19b8a15b85c2602b0648d6ac3fa0",
-                        "tx_index":69008291,
-                        "tx_output_n": 0,   
-                        "script":"76a9148a462b671791d0bfbd8fd0d3987f652258d06dd088ac",
-                        "value": 180000,
-                        "value_hex": "02bf20",
-                        "confirmations":83
-                    }
-                  
-                ]
-            };
-        var data = format_unspent_response(demo_unspent_blockchain, 'blockchain', '391ByYRP3ZGtizQt3XKc96T8xxLvzWj5Ec');
-        assert(data['unspent_outputs'].length == 2, 'right number of outputs per address');
-        assert(data['unspent_outputs'][0]['tx_hash_big_endian'] == "91b7684656c3ea3f8aa22bb5246721d691295c8b0813f40cba58b29268760d33", 'txid is called tx_hash_big_endian');
-        assert(data['unspent_outputs'][0]['value'] == 20000, 'amount is returned in satoshis');
-        assert(data['balance'] == 200000, 'balance is provided and in satoshis');
-
-    }
-
-    /*
-    We use blockr for testnet and blockchain.info for livenet.
-    These return unspent outputs in different formats, reformat for what we need
-    */
-    function format_unspent_response(response, format, addr) {
-
-        var ret = {
-                'balance': 0,
-                'unspent_outputs': []
-        };
-        if (format == 'blockr') {
-            var data = response['data'];
-
-            // Unspent with only one argument returns an object
-            if (data.hasOwnProperty('address')) {
-                data = [data];
-            }
-            for(var i=0; i<data.length; i++) {
-                for (var j=0; j<data[i]['unspent'].length; j++) {
-                    var o_in = data[i]['unspent'][j];
-                    var o_out = {
-                        'tx_hash_big_endian': o_in['tx'],
-                        'value': o_in['amount'] * 100000000,
-                        'tx_output_n': o_in['n'],
-                        'script': o_in['script'],
-                        'address': addr
-                    }
-                    ret['unspent_outputs'].push(o_out);
-                    ret['balance'] = ret['balance'] + o_out['value'];
-                }
-            }
-        } else {
-            var data = response['unspent_outputs'];
-            for(var i=0; i<data.length; i++) {
-                var o_in = data[i];
-                var o_out = {
-                    'tx_hash_big_endian': o_in['tx_hash_big_endian'],
-                    'value': o_in['value'],
-                    'tx_output_n': o_in['tx_output_n'],
-                    'script': o_in['script'],
-                    'address': addr
-                }
-                ret['unspent_outputs'].push(o_out);
-                ret['balance'] = ret['balance'] + o_out['value'];
-            }
-        }
-        return ret; 
-
-    }
-
-
-    function run_tests() {
-
-        test_format_unspent_response();
-        test_format_sanitization();
-        test_hash_to_contract();
-        test_mnemonic_handling();
-        test_transaction_cycle();
-        test_script_monkey_patches();
-        console.log('All tests complete');
-
-    }
-
-    function store_contract(c, is_update, success_callback, fail_callback) {
+    function save_contract(c, is_update, success_callback, fail_callback) {
 
         var url = settings.pubkey_record_store;
         $.ajax({
@@ -7645,200 +7499,6 @@ console.log(c243t_tx_hex_wrong);
 
         console.log("store: ",c);
         return;
-
-        //console.log("storing:");
-        //console.log(c);
-        contract_store = {
-            'contracts': {},
-            'default': null
-        }
-
-        // We sometimes have a lot of data here - just store the bare minimum to recreate the contract
-        var storeme = {};
-        storeme['yes_user_pubkey'] = c['yes_user_pubkey'];
-        storeme['no_user_pubkey'] = c['no_user_pubkey'];
-        storeme['address'] = c['address'];
-        storeme['id'] = c['id'];
-
-        p2sh_addr = c['address'];
-        contract_json_str = localStorage.getItem('contract_store');
-        if (contract_json_str) {
-            contract_store = JSON.parse(contract_json_str);
-        }
-        if (!is_update) {
-            if (contract_store['contracts'][p2sh_addr]) {
-                return; // Already there
-            }
-        }
-        //contract_store['contracts'][p2sh_addr] = storeme;
-        contract_store['contracts'][p2sh_addr] = c;
-        contract_store['default'] = p2sh_addr;
-
-        localStorage.setItem('contract_store', JSON.stringify(contract_store));
-
-    }
-
-    function is_contract_stored(p2sh_addr) {
-
-        contract_json_str = localStorage.getItem('contract_store');
-        if (!contract_json_str) {
-            return false;
-        }
-        contract_store = JSON.parse(contract_json_str);
-        if (contract_store['contracts'][p2sh_addr]) {
-            return true; // Already there
-        }
-        return false;
-
-    }
-
-    function store_athlete(a) {
-
-        athlete_store = {
-            'athletes': {},
-            'default': null
-        }
-
-        athlete_json_str = localStorage.getItem('athlete_store');
-        if (athlete_json_str) {
-            athlete_store = JSON.parse(athlete_json_str);
-        }
-        athlete_store['athletes'][a] = a;
-
-        // Always set the most recently stored to the default
-        athlete_store['default'] = a;
-
-        localStorage.setItem('athlete_store', JSON.stringify(athlete_store));
-
-    }
-
-    // Return a hash of athlete names and true/false for default or not
-    function load_athletes() {
-       //console.log('loading a');
-        athlete_json_str = localStorage.getItem('athlete_store');
-        if (!athlete_json_str) {
-            return [];
-        }
-        var athlete_store = JSON.parse(athlete_json_str);
-        if (!athlete_store['athletes']) {
-            return [];
-        }
-        var default_athlete = athlete_store['default'];
-        ret = {};
-        for (a in athlete_store['athletes']) {
-            var is_default = (a == default_athlete); 
-            ret[a] = is_default; 
-        }
-        return ret;
-
-    }
-
-    function load_default_athlete() {
-
-        athletes = load_athletes();
-        if (athletes.length == 0) {
-            return null;
-        }
-        for (a in athletes) {
-            if (athletes[a]) {
-                return a;
-            }
-        }
-        return null;
-
-    }
-
-    function store_key(mnemonic_text, k) {
-
-        //console.log("storing:");
-        //console.log(k);
-        var key_store = {
-            'mnemonics': {},
-            'default': null
-        }
-
-        var key_json_str = localStorage.getItem('key_store');
-        if (key_json_str) {
-            key_store = JSON.parse(key_json_str);
-        }
-        key_store['mnemonics'][mnemonic_text] = k;
-        key_store['default'] = mnemonic_text;
-        //console.log(JSON.stringify(key_store));
-
-        localStorage.setItem('key_store', JSON.stringify(key_store));
-        return true;
-
-    }
-
-    function stored_priv_for_pub(pub) {
-
-        var key_json_str = localStorage.getItem('key_store');
-        if (key_json_str == '') {
-            return null;
-        }
-        key_store = JSON.parse(key_json_str);
-        mnemonics = key_store['mnemonics'];
-        for (var m in mnemonics) {
-            if (!mnemonics.hasOwnProperty(m)) {
-                continue;
-            }
-            var k = mnemonics[m];
-            if (k['pub'] == pub) {
-                return k['priv'];
-            }
-            console.log("no match for pub ",pub, k['pub']);
-            //console.log("no match for "+pub+": "+k['pub']);
-            //console.log(k);
-        }
-        return null;
-
-    }
-
-    function default_stored_mnemnonic() {
-        key_json_str = localStorage.getItem('key_store');
-        if (key_json_str) {
-            var key_store = JSON.parse(key_json_str);
-            return key_store['default'];
-        }
-        return null;
-
-    }
-
-    function delete_stored_key(mnemonic) {
-
-        key_json_str = localStorage.getItem('key_store');
-        if (key_json_str) {
-            var key_store = JSON.parse(key_json_str);
-            console.log('before: ',key_store['mnemonics']);
-            delete key_store['mnemonics'][mnemonic];
-
-            var others_left = false;
-            for (sd in key_store['mnemonics']) {
-                if (key_store['mnemonics'].hasOwnProperty(sd)) {
-                    others_left = true;
-                    break;
-                }
-            }
-            if (others_left) {
-                localStorage.setItem('key_store', JSON.stringify(key_store));
-            } else {
-                localStorage.removeItem('key_store');
-            }
-        }
-        return null;
-
-    }
-
-    function load_stored_key(mnemonic) {
-        key_json_str = localStorage.getItem('key_store');
-        if (key_json_str) {
-            //console.log("got key store");
-            var key_store = JSON.parse(key_json_str);
-            if (key_store['mnemonics'][mnemonic]) {
-                return key_store['mnemonics'][mnemonic];
-            } 
-        }
-        return null;
 
     }
 
@@ -7894,7 +7554,7 @@ console.log(c243t_tx_hex_wrong);
         var k = null;
         if (!ng) {
             var seed = BIP39.mnemonicToSeedHex(mnemonic_text);
-            k = load_stored_key(mnemonic_text) || key_for_new_seed(seed);
+            k = storage.load_stored_key(mnemonic_text) || bitcoin_utils.key_for_new_seed(seed);
             if (k['user_confirmed_ts']) { 
                 $('body').addClass('mnemonic-created-and-confirmed');
             } else if (!is_scripted) {
@@ -7933,7 +7593,7 @@ console.log(c243t_tx_hex_wrong);
         }
 
         var seed = BIP39.mnemonicToSeedHex(mnemonic_text);
-        var k = load_stored_key(mnemonic_text) || key_for_new_seed(mnemonic_text);
+        var k = storage.load_stored_key(mnemonic_text) || bitcoin_utils.key_for_new_seed(mnemonic_text);
 
         $('body').addClass('mnemonic-created-and-confirmed');
         $('#your-private-key').val(k['priv']);
@@ -7997,10 +7657,10 @@ console.log(c243t_tx_hex_wrong);
             return false;
         }
 
-        var yes_user_pubkey =  format_pubkey(contract_data[0]);
-        var no_user_pubkey = format_pubkey(contract_data[1]);
-        var fact_id = format_fact_id(contract_data[2]);
-        var is_testnet = prefix_to_testnet_setting(contract_data[3]);
+        var yes_user_pubkey =  bitcoin_utils.format_pubkey(contract_data[0]);
+        var no_user_pubkey = bitcoin_utils.format_pubkey(contract_data[1]);
+        var fact_id = realitykeys_utils.format_fact_id(contract_data[2]);
+        var network = bitcoin_utils.format_network(contract_data[3]);
 
         if ( yes_user_pubkey == null || no_user_pubkey == null || fact_id == null) {
             return null;
@@ -8010,7 +7670,7 @@ console.log(c243t_tx_hex_wrong);
         c['yes_user_pubkey'] = yes_user_pubkey;
         c['no_user_pubkey'] = no_user_pubkey;
         c['id'] = fact_id;
-        c['is_testnet'] = is_testnet;
+        c['network'] = network;
 
         return c;
 
@@ -8035,26 +7695,6 @@ console.log("import import_hash "+import_hash);
 
         return false;
 
-    }
-
-    function charity_display_for_pubkey(pubkey) {
-        var txt = $('#charity-select').find('[value='+pubkey+']').text();
-        if (txt == '') {
-            return pubkey;
-        }
-        return txt;
-    }
-
-    function charity_display_for_form() {
-        var pubkey = $('#charity-select').val();
-        if (pubkey == 'other') {
-            pubkey = $('#charity-public-key').val();
-        } 
-        return charity_display_for_pubkey(pubkey);
-    }
-
-    function activity_verb(activity) {
-        return $('#activity').find('option[value="'+activity+'"]').attr('data-verb');
     }
 
     // TODO: This ends up duplicating a lot with display_single_contract
@@ -8082,13 +7722,13 @@ console.log("import import_hash "+import_hash);
                 data['yes_user_pubkey'] = c['yes_user_pubkey'];
                 data['no_user_pubkey'] = c['no_user_pubkey'];
                 data['is_testnet'] = c['is_testnet'];
-                data['address'] = p2sh_address(data);
+                data['address'] = realitykeys_utils.p2sh_address(data);
 
-                if (is_contract_stored(data['address'])) {
+                if (storage.is_contract_stored(data['address'])) {
                     return true;
                 }
 
-                store_contract(data);
+                save_contract(data);
                 reflect_contract_added(data);
                 $(document).scrollTop( $("#section3").offset().top );
             },
@@ -8099,18 +7739,6 @@ console.log("import import_hash "+import_hash);
         });
         return false;
 
-    }
-
-    function wins_on_for_stored_keys(c) {
-        if (c == null) {
-            return false;
-        }
-        if (stored_priv_for_pub(c['yes_user_pubkey'])) {
-            return 'Yes';
-        } else if (stored_priv_for_pub(c['no_user_pubkey'])) {
-            return 'No';
-        }  
-        return 'None'
     }
 
     // Return a nicely-formatted date, if the browser supports it
@@ -8125,45 +7753,11 @@ console.log("import import_hash "+import_hash);
         }
     }
 
+    
 
-    function eligius_cross_domain_post(data) {
 
-        // Some browsers sensibly refuse to do http posts from https pages
-        // For now proxy eligius over https to work around this 
-        // If helper.bymycoins.com goes away you may need to restore eligius and tinker with browser settings
-        //var url = 'http://eligius.st/~wizkid057/newstats/pushtxn.php';
-        var url = 'https://helper.bymycoins.com/pushnonstandardtx/pushtxn.php';
 
-        var iframe = document.createElement("iframe");
-        document.body.appendChild(iframe);
-        iframe.style.display = "none";
-
-        // Just needs a unique name, last 16 characters of tx hex should be ok
-        var target_name = 'tx-' + data.substring(data.length-16, data.length); 
-        iframe.contentWindow.name = target_name;
-
-        // construct a form with hidden inputs, targeting the iframe
-        var form = document.createElement("form");
-        form.target = target_name;
-        form.action = url;
-        form.method = "POST";
-
-        var tx_input = document.createElement("input");
-        tx_input.type = "hidden";
-        tx_input.name = 'transaction';
-        tx_input.value = data
-        form.appendChild(tx_input);
-
-        var send_input = document.createElement("input");
-        send_input.type = "hidden";
-        send_input.name = 'send';
-        send_input.value = 'Push' 
-        form.appendChild(send_input);
-
-        document.body.appendChild(form);
-        form.submit();
-
-    }
+/// NO MORE UI ABOVE THIS LINE
 
     function execute_claim(to_addr, c, txes, user_privkey, winner_privkey, network) {
 
@@ -8179,10 +7773,10 @@ console.log("import import_hash "+import_hash);
         for (i=0; i < txes.length; i++) {
             
             var txHex = null;
-            txHex = hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
+            txHex = realitykeys_utils.hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
             /*
             try {
-                txHex = hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
+                txHex = realitykeys_utils.hex_for_claim_execution(to_addr, user_privkey, winner_privkey, txes[i], c, network); 
             } catch (e) {
                 console.log("hex creation failed", e);
                 continue;
@@ -8198,8 +7792,6 @@ console.log("import import_hash "+import_hash);
             if (network == 'livenet' && settings.pushtx_livenet == 'none') {
                 console.log('created but will not broadcast', txHex);
                 return;
-            } else if (network == 'livenet' && settings.pushtx_livenet == 'eligius') {
-                eligius_cross_domain_post(txHex);
             } else {
                 // this will always be testnet until the happy day when bitcore makes our transactions standard
                 //var url = (network == 'testnet') ? 'https://tbtc.blockr.io/api/v1/tx/push' : 'https://btc.blockr.io/api/v1/tx/push';
@@ -8225,7 +7817,7 @@ console.log("import import_hash "+import_hash);
                                 eligius_cross_domain_post(txHex);
                             }
                             c['claim_txid'] = txid;
-                            store_contract(c, true);
+                            save_contract(c, true);
                         }
                     },
                     error: function ( response ) {
@@ -8238,139 +7830,8 @@ console.log("import import_hash "+import_hash);
         }
     }
 
-    function hex_for_claim_execution(to_addr, priv1, priv2, tx, c, network) {
-        console.log("making hex for output", tx);
-
-        var tx = tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network); 
-        console.log("tx_for_claim_execution:", tx);
-        var txHex =  tx.toHex();
-        //console.log(txHex);
-
-        return txHex;
-
-    }
-
-    function tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network) {
-
-        // Find the right branch.
-        // This should have both the keys.
-
-console.log("in tx_for_claim_execution", c);
-
-        //console.log(tx);
-        var amount = tx['value'];
-
-        //alert('Next step: make tx for '+n+','+txid+','+amount);
-        var utxos2 = [
-        {
-            address: tx['address'],
-            txid: tx['tx_hash_big_endian'],
-            vout: tx['tx_output_n'],
-            ts: 1396375187,
-            scriptPubKey: tx['script'], // same for blockr and blockchain.info
-            amount: amount / 100000000,
-            confirmations: 1
-        }
-        ];
-        console.log("made utxos2", utxos2);
-
-        var fee = 10000;
-        //var opts = {network: bitcoin.networks[network], nreq:[2,2,2], pubkeys:pubkeys, fee: (fee)/100000000};
-        //console.log("opts", opts);
-
-        outs = [{address:to_addr, amount:((amount-fee)/100000000)}];
-        console.log("outs", outs);
-        console.log("amount-fee", (amount-fee));
-        //console.log("outs:");
-        console.log("c_address", c['address']);
-        //console.log(outs);
-
-        //var privs = [winner_privkey, 'HERE'];
-        //var privs = [winner_privkey];
-        //console.log(winner_privkey);
-
-        console.log("create builder");
-        var b = new bitcoin.TransactionBuilder();
-        console.log("addi input");
-        b.addInput(utxos2[0]['txid'], 0);
-        console.log("addi output");
-        b.addOutput(to_addr, (amount-fee));
-
-        console.log("outputs done, doing redeem sript thing");
-
-        var multisig_redeem_script = redeem_script(c);
-        var branching_builder = new BranchingBuilder(b);
-
-        var user_wk = ECKey.fromWIF(priv1);
-        var winner_wk = ECKey.fromWIF(priv2);
-
-        var claim_privkeys = [ user_wk, winner_wk ];
-        var claim_pubkeys = claim_privkeys.map( function(x) { return x.pub.toHex(); });
-
-        var combos = [
-            [ c['yes_user_pubkey'], c['yes_pubkey'] ],
-            [ c['no_user_pubkey'], c['no_pubkey'] ],
-            [ c['yes_user_pubkey'], c['no_user_pubkey'] ]
-        ];
-
-        var branch = -1;
-        for (var i=0; i<combos.length; i++) {
-            var combo = combos[i];
-            var intersection = combo.filter(function(n) {
-                    return claim_pubkeys.indexOf(n) != -1
-            });
-            if (intersection.length == claim_privkeys.length) {
-                branch = i;
-                break;
-            }
-        }
-
-        assert(branch >= 0);
-
-        console.log("claiming with branch pubkeys:", branch, claim_pubkeys);
-        //var user_pubkeys = [ c['yes_user_pubkey'], c['no_user_pubkey'] ];
-
-        //yes_pubkeys = yes_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-        claim_pubkeys = claim_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-        //user_pubkeys = user_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-
-        //var combo1 = scripts.multisigOutput(2, yes_pubkeys);
-        console.log("getting winning_combo");
-        var winning_combo = scripts.multisigOutput(2, claim_pubkeys);
-        //var combo3 = scripts.multisigOutput(2, user_pubkeys);
-
-        console.log("selecting input branch");
-        branching_builder.selectInputBranch(0, branch, combos.length);
-        //b.sign([user_privkey_wif, winner_privkey_wif]);
-
-        console.log("signing branch");
-        for (var i=0; i<claim_privkeys.length; i++) {
-            branching_builder.signBranch(0, claim_privkeys[i], multisig_redeem_script, null, winning_combo)
-        }
-
-        console.log("doing the build");
-        var tx = branching_builder.build();
-        console.log("done the build", tx);
-
-        //tx = b.build();
-        return tx;
-
-    }
-
-    function testnet_setting_to_prefix(is_testnet) {
-        if (is_testnet) {
-            return 'tbtc';
-        } else {
-            return 'btc';
-        }
-    }
-
-    function prefix_to_testnet_setting(prefix) {
-        return (prefix == 'tbtc');
-    }
-
     function sharing_url(c, full) {
-        var store = c['yes_user_pubkey']+'-'+c['no_user_pubkey']+'-'+c['id']+'-'+testnet_setting_to_prefix(c['is_testnet']);;
+        var store = c['yes_user_pubkey']+'-'+c['no_user_pubkey']+'-'+c['id']+'-'+c['network'];
         var base = '';
         if (full) {
             base += document.URL;
@@ -8401,8 +7862,8 @@ console.log("in tx_for_claim_execution", c);
         row.find('.funding-address').val(c['address']);
 
         var lnk = $('<a>');
-        lnk.attr('href', 'https://blockchain.info/address/' + format_address(c['address']));
-        lnk.text(satoshis_to_display_format(c['balance']) + ' BTC');
+        lnk.attr('href', 'https://blockchain.info/address/' + bitcoin_utils.format_address(c['address']));
+        lnk.text(bitcoin_utils.satoshis_to_display_format(c['balance']) + ' BTC');
 
         row.find( "[data-type='funds']" ).html(lnk);
         //row.find( "[data-type='settlement_date']" ).text(c['settlement_date']);
@@ -8437,7 +7898,7 @@ console.log("in tx_for_claim_execution", c);
             return false;
         }
 
-        var url = c.is_testnet ? 'https://tbtc.blockr.io/api/v1/address/balance/' + addr+'?confirmations=0' : 'https://btc.blockr.io/api/v1/address/balance/' + addr+'?confirmations=0';
+        var url = c.network == 'testnet' ? 'https://tbtc.blockr.io/api/v1/address/balance/' + addr+'?confirmations=0' : 'https://btc.blockr.io/api/v1/address/balance/' + addr+'?confirmations=0';
         $.ajax({
             url: url, 
             type: 'GET',
@@ -8472,177 +7933,9 @@ console.log("in tx_for_claim_execution", c);
 
     }
 
-    function key_for_new_seed(seed) {
-        var privateKey = crypto.sha256(seed).toString('hex');
-        var key_buffer = conv(privateKey, {in: 'hex', out: 'buffer'});
-        var big_integer = BigInteger.fromBuffer(key_buffer);
-        var key = new ECKey(big_integer, true);
-        return {
-            'seed': seed,
-            'version': '1.0',
-            'priv': key.toWIF(),
-            'pub': key.pub.toHex(),
-            'user_confirmed_ts': null
-        };
-
-    }
-
-    function p2sh_address(data) {
-
-        if (!data['yes_user_pubkey']) return null;
-        if (!data['no_user_pubkey']) return null;
-        if (!data['yes_pubkey']) return null;
-        if (!data['no_pubkey']) return null;
-console.log("p2sh_address", data);
-        var script = redeem_script(data);
-
-        //var addr = bitcore.Address.fromScript(script, data['network']);
-
-        var scriptPubKey = bitcoin.scripts.scriptHashOutput(script.getHash());
-        console.log(scriptPubKey);
-        var addr = bitcoin.Address.fromOutputScript(scriptPubKey).toString()
-
-
-        return addr.toString();
-
-    }
-
-    function redeem_script(data) {
-
-        var yes_pubkeys = [ data['yes_user_pubkey'], data['yes_pubkey'] ];
-        var no_pubkeys = [ data['no_user_pubkey'], data['no_pubkey'] ];
-        var user_pubkeys = [ data['yes_user_pubkey'], data['no_user_pubkey'] ];
-
-        yes_pubkeys = yes_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-        no_pubkeys = no_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-        user_pubkeys = user_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
-
-        var combo1 = scripts.multisigOutput(2, yes_pubkeys);
-        var combo2 = scripts.multisigOutput(2, no_pubkeys);
-        var combo3 = scripts.multisigOutput(2, user_pubkeys);
-
-        var branching_builder = new BranchingBuilder();
-        branching_builder.addSubScript(combo1);
-        branching_builder.addSubScript(combo2);
-        branching_builder.addSubScript(combo3);
-
-        var p2sh_script = branching_builder.script();
-        console.log("redeem script:");
-        console.log(p2sh_script);
-
-        return p2sh_script;
-
-    }
-
-    function update_submittable() {
-        var ok = true;
-        var user_id = $('#user').val();
-        if ( (user_id == '') || ( $('#user').attr('data-validated-user-id') != user_id) ) {
-            ok = false;
-        }
-        if (ok) {
-            //$('#set-goal-submit').removeAttr('disabled');
-            $('body').addClass('athlete-connected');
-        } else {
-            //$('#set-goal-submit').attr('disabled', 'disabled');
-            $('body').removeClass('athlete-connected');
-        }
-        return true;
-    }
-
-    // Check the user is authenticated so Reality Keys can get at their data.
-    // Once they are, set their username in the data-validated-user-id attribute.
-    function validate_user( inpjq ) {
-        var user_id = inpjq.val();
-        if ( (user_id != '') && (inpjq.attr('data-validated-user-id') != user_id ) ) {
-            var url = oracle_api_base + '/runkeeper/user-info-by-id/' + user_id;
-            $.ajax({
-                url: url, 
-                type: 'GET',
-                dataType: 'json', 
-                success: function(data) {
-                    if ( data['status'] == 'success' ) {
-                        inpjq.attr('data-validated-user-id', data['data']['user_id']);
-                        inpjq.attr('data-validated-user-profile', data['data']['profile']);
-                        inpjq.attr('data-validated-user-name', data['data']['name']);
-                        update_goal_text($('#set-goal-form'));
-                    }
-                    update_submittable();
-                },
-                error: function(data) {
-                    update_submittable();
-                }
-            });
-        } else {
-            update_submittable();
-        }
-    }
-
     function url_parameter_by_name(name) {
         var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
         return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
-    }
-
-    function select_to_icon(icon_class, attribute_name, selected_item) {
-        $('.'+icon_class+':not([data-activity='+selected_item+'])').removeClass('selected');
-        $('.'+icon_class+'[data-activity='+selected_item+']').addClass('selected');
-    }
-
-    function update_goal_text(frm) {
-        frm.find('.activity-verb').text( $('#activity').find(':selected').attr('data-verb') );
-        frm.find('.goal-text').text( $('#goal').val() + ' meters' );
-        frm.find('.settlement-date-text').text( formatted_date($('#settlement_date').val()) );
-
-        var charity_display = charity_display_for_form();
-        frm.find('.charity-display-text').text( charity_display );
-
-        var userjq = $('#user');
-        var user = '';
-        if ( userjq.attr('data-validated-user-id') == userjq.val() ) {
-            user = userjq.attr('data-validated-user-name');
-        }
-        var user_text = ( user == '' ) ? '' : ', '+user+',';
-        frm.find('.user-text').text( user_text );
-        var contract_text = {
-            'activity_verb': $('#activity').find(':selected').attr('data-verb'),
-            'goal_text': $('#goal').val() + ' meters',
-            'settlement_date': $('#settlement_date').val(),
-            'charity_display': charity_display,
-            'user': user
-        }
-        $('.contract-title-start').text(formatted_title_start(contract_text, false));
-        $('.contract-title-end').text(formatted_title_end(contract_text, false));
-    }
-
-    function formatted_title_start(ct, past, tweet) {
-        if (past) {
-            txt = ct['user'] + ' swore';
-            if (ct['total_received']) {
-                txt += ' by ' + ct['total_received'] + ' BTC';
-            } 
-            txt += ' to ' + ct['activity_verb'] + ' ' + ct['goal_text'] + ' by '+formatted_date(ct['settlement_date']);  
-            txt = txt.charAt(0).toUpperCase()+txt.substring(1); // capitalize first letter
-            return txt;
-        }
-        var txt = tweet ? '@bymycoins I' : 'I';
-        if (!tweet && ct['user'] != '') {
-            txt += ', '+ct['user'] + ',';
-        }
-        txt += tweet ? ' swear' : ' swear by my coins';
-        txt += ' to ' + ct['activity_verb'] + ' ' + ct['goal_text'] + ' by '+formatted_date(ct['settlement_date']);  
-        return txt;
-    }
-
-    function formatted_title_end(ct, past, tweet) {
-        if (tweet) {
-            return ' or pay ' + ct['charity_display'];
-        } else {
-            return '...or they will go to ' + ct['charity_display'];
-        }
-    }
-
-    function handle_set_goal_form_change() {
-        update_goal_text($('#set-goal-form'));
     }
 
     function register_contract(params, success_callback, fail_callback) {
@@ -8747,10 +8040,10 @@ console.log("p2sh_address", data);
             var mnemonic_text = $('#mnemonic').val();
             console.log("getting seed for", mnemonic_text);
             var seed = BIP39.mnemonicToSeedHex(mnemonic_text);
-            var k = load_stored_key(mnemonic_text) || key_for_new_seed(seed);
+            var k = storage.load_stored_key(mnemonic_text) || bitcoin_utils.key_for_new_seed(seed);
             k['user_confirmed_ts'] = new Date().getTime();
             console.log("store", k);
-            if (!store_key(mnemonic_text, k, true)) {
+            if (!storage.store_key(mnemonic_text, k, true)) {
                 return false;
             }
             console.log("stored", k);
@@ -8760,11 +8053,11 @@ console.log("p2sh_address", data);
 
         $('#forget-mnemonic-button').unbind('click').click( function() {
             var mnemonic_text = $('#mnemonic').val();
-            delete_stored_key(mnemonic_text);
+            storage.delete_stored_key(mnemonic_text);
             $('body').removeClass('mnemonic-stored');
         });
 
-        if (default_mnemonic = default_stored_mnemnonic()) {
+        if (default_mnemonic = storage.default_stored_mnemnonic()) {
             $('#mnemonic').val(default_mnemonic);
             $('body').addClass('mnemonic-stored');
         } else {
@@ -8814,7 +8107,7 @@ console.log("p2sh_address", data);
             'site_resource_id': $('#site-resource-id').val()
         };
         console.log('c:',c);
-        var addr = p2sh_address(c);
+        var addr = realitykeys_utils.p2sh_address(c);
         c['address'] = addr; // used by store
 
         var offline = false;
@@ -8827,7 +8120,7 @@ console.log("p2sh_address", data);
                 $('#funding-address').val(''); 
             }
             if (addr != '') {
-                store_contract(
+                save_contract(
                     c, 
                     false, 
                     function(data) {
@@ -8989,9 +8282,9 @@ console.log("p2sh_address", data);
                                         
                                                                 }
                             }
-                            $('#available-to-claim-balance').text(satoshis_to_display_format(available_to_claim_balance));
-                            $('#waiting-for-settlement-balance').text(satoshis_to_display_format(waiting_for_settlement_balance));
-                            $('#waiting-for-refund-balance').text(satoshis_to_display_format(waiting_for_refund_balance));
+                            $('#available-to-claim-balance').text(bitcoin_utils.satoshis_to_display_format(available_to_claim_balance));
+                            $('#waiting-for-settlement-balance').text(bitcoin_utils.satoshis_to_display_format(waiting_for_settlement_balance));
+                            $('#waiting-for-refund-balance').text(bitcoin_utils.satoshis_to_display_format(waiting_for_refund_balance));
                         }).fail( function(response) {
                         }).always( function(response) {
                         });
@@ -9082,8 +8375,8 @@ console.log("p2sh_address", data);
             type: 'GET',
             dataType: 'json'
         }).done( function(response) {
-            var unspent_data = format_unspent_response(response, response_format, addr);
-            balance = satoshis_to_display_format(unspent_data['balance']);
+            var unspent_data = bitcoin_utils.format_unspent_response(response, response_format, addr);
+            balance = bitcoin_utils.satoshis_to_display_format(unspent_data['balance']);
             $('#address-balance').text(balance);
         }).fail( function(data) {
             console.log(data.responseText);
@@ -9123,7 +8416,7 @@ console.log("p2sh_address", data);
                 'network': network
             };
             console.log("using keys to get p2sh: ",keys);
-            var addr = p2sh_address(keys);
+            var addr = realitykeys_utils.p2sh_address(keys);
             if (addr == null) {
                 return false;
             }
@@ -9147,7 +8440,7 @@ console.log("p2sh_address", data);
                 type: 'GET',
                 dataType: 'json'
             }).done( function(response) {
-                var data = format_unspent_response(response, response_format, addr);
+                var data = bitcoin_utils.format_unspent_response(response, response_format, addr);
                 console.log("compare keys and addr", keys, addr);
                 execute_claim(withdraw_to_addr, keys, data['unspent_outputs'], $('#your-private-key').val(), claim_frm.find('.winner-privkey').val(), network);
             }).fail( function(data) {
@@ -9199,8 +8492,206 @@ return;
     initialize_page();
 
 
-}).call(this,require("buffer").Buffer)
-},{"./../lib/branching_transaction_builder":54,"./settings":56,"bigi":59,"binstring":61,"bip39":62,"bitcoinjs-lib":115,"buffer":3}],56:[function(require,module,exports){
+},{"./../lib/branching_transaction_builder":54,"./bitcoin_utils":55,"./contract_storage":56,"./realitykeys_utils":58,"./settings":59,"assert":1,"bigi":62,"binstring":64,"bip39":65,"bitcoinjs-lib":118}],58:[function(require,module,exports){
+var bitcoin = require('bitcoinjs-lib');
+var conv = require('binstring'); // TODO: Can probably get this functionality from elsewhere
+var crypto = bitcoin.crypto;
+
+var ECPubKey = bitcoin.ECPubKey;
+var ECKey = bitcoin.ECKey;
+var TransactionBuilder = bitcoin.TransactionBuilder;
+var scripts = bitcoin.scripts;
+var BranchingBuilder = require('./../lib/branching_transaction_builder');
+var Address = bitcoin.Address;
+var BIP39 = require('bip39');
+var BigInteger = require('bigi');
+
+var assert = require('assert');
+
+exports.format_fact_id = function(txt) {
+    return parseInt(txt) + '';
+}
+
+exports.hex_for_claim_execution = function(to_addr, priv1, priv2, tx, c, network) {
+    console.log("making hex for output", tx);
+
+    var tx = this.tx_for_claim_execution(to_addr, priv1, priv2, tx, c, network); 
+    console.log("realitykeys_utils.tx_for_claim_execution:", tx);
+    var txHex =  tx.toHex();
+    //console.log(txHex);
+
+    return txHex;
+
+}
+
+exports.tx_for_claim_execution = function(to_addr, priv1, priv2, tx, c, network) {
+
+    // Find the right branch.
+    // This should have both the keys.
+
+    console.log("in realitykeys_utils.tx_for_claim_execution", c);
+
+    //console.log(tx);
+    var amount = tx['value'];
+
+    //alert('Next step: make tx for '+n+','+txid+','+amount);
+    var utxos2 = [
+    {
+        address: tx['address'],
+        txid: tx['tx_hash_big_endian'],
+        vout: tx['tx_output_n'],
+        ts: 1396375187,
+        scriptPubKey: tx['script'], // same for blockr and blockchain.info
+        amount: amount / 100000000,
+        confirmations: 1
+    }
+    ];
+    console.log("made utxos2", utxos2);
+
+    var fee = 10000;
+    //var opts = {network: bitcoin.networks[network], nreq:[2,2,2], pubkeys:pubkeys, fee: (fee)/100000000};
+    //console.log("opts", opts);
+
+    outs = [{address:to_addr, amount:((amount-fee)/100000000)}];
+    console.log("outs", outs);
+    console.log("amount-fee", (amount-fee));
+    //console.log("outs:");
+    console.log("c_address", c['address']);
+    //console.log(outs);
+
+    //var privs = [winner_privkey, 'HERE'];
+    //var privs = [winner_privkey];
+    //console.log(winner_privkey);
+
+    console.log("create builder");
+    var b = new bitcoin.TransactionBuilder();
+    console.log("addi input");
+    b.addInput(utxos2[0]['txid'], 0);
+    console.log("addi output");
+    b.addOutput(to_addr, (amount-fee));
+
+    console.log("outputs done, doing redeem sript thing");
+
+    var multisig_redeem_script = this.redeem_script(c);
+    var branching_builder = new BranchingBuilder(b);
+
+    var user_wk = ECKey.fromWIF(priv1);
+    var winner_wk = ECKey.fromWIF(priv2);
+
+    var claim_privkeys = [ user_wk, winner_wk ];
+    var claim_pubkeys = claim_privkeys.map( function(x) { return x.pub.toHex(); });
+
+    var combos = [
+        [ c['yes_user_pubkey'], c['yes_pubkey'] ],
+        [ c['no_user_pubkey'], c['no_pubkey'] ],
+        [ c['yes_user_pubkey'], c['no_user_pubkey'] ]
+    ];
+
+    var branch = -1;
+    for (var i=0; i<combos.length; i++) {
+        var combo = combos[i];
+        var intersection = combo.filter(function(n) {
+                return claim_pubkeys.indexOf(n) != -1
+        });
+        if (intersection.length == claim_privkeys.length) {
+            branch = i;
+            break;
+        }
+    }
+
+    assert(branch >= 0);
+
+    console.log("claiming with branch pubkeys:", branch, claim_pubkeys);
+    //var user_pubkeys = [ c['yes_user_pubkey'], c['no_user_pubkey'] ];
+
+    //yes_pubkeys = yes_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+    claim_pubkeys = claim_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+    //user_pubkeys = user_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+
+    //var combo1 = scripts.multisigOutput(2, yes_pubkeys);
+    console.log("getting winning_combo");
+    var winning_combo = scripts.multisigOutput(2, claim_pubkeys);
+    //var combo3 = scripts.multisigOutput(2, user_pubkeys);
+
+    console.log("selecting input branch");
+    branching_builder.selectInputBranch(0, branch, combos.length);
+    //b.sign([user_privkey_wif, winner_privkey_wif]);
+
+    console.log("signing branch");
+    for (var i=0; i<claim_privkeys.length; i++) {
+        branching_builder.signBranch(0, claim_privkeys[i], multisig_redeem_script, null, winning_combo)
+    }
+
+    console.log("doing the build");
+    var tx = branching_builder.build();
+    console.log("done the build", tx);
+
+    //tx = b.build();
+    return tx;
+
+}
+
+exports.p2sh_address = function(data) {
+
+    if (!data['yes_user_pubkey']) return null;
+    if (!data['no_user_pubkey']) return null;
+    if (!data['yes_pubkey']) return null;
+    if (!data['no_pubkey']) return null;
+    console.log("realitykeys_utils.p2sh_address", data);
+    var script = this.redeem_script(data);
+
+    //var addr = bitcore.Address.fromScript(script, data['network']);
+
+    var scriptPubKey = bitcoin.scripts.scriptHashOutput(script.getHash());
+    console.log(scriptPubKey);
+    var addr = bitcoin.Address.fromOutputScript(scriptPubKey).toString()
+
+
+    return addr.toString();
+
+}
+
+exports.redeem_script = function(data) {
+
+    var yes_pubkeys = [ data['yes_user_pubkey'], data['yes_pubkey'] ];
+    var no_pubkeys = [ data['no_user_pubkey'], data['no_pubkey'] ];
+    var user_pubkeys = [ data['yes_user_pubkey'], data['no_user_pubkey'] ];
+
+    yes_pubkeys = yes_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+    no_pubkeys = no_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+    user_pubkeys = user_pubkeys.map( function(x) { return new ECPubKey.fromHex(x) } );
+
+    var combo1 = scripts.multisigOutput(2, yes_pubkeys);
+    var combo2 = scripts.multisigOutput(2, no_pubkeys);
+    var combo3 = scripts.multisigOutput(2, user_pubkeys);
+
+    var branching_builder = new BranchingBuilder();
+    branching_builder.addSubScript(combo1);
+    branching_builder.addSubScript(combo2);
+    branching_builder.addSubScript(combo3);
+
+    var p2sh_script = branching_builder.script();
+    console.log("redeem script:");
+    console.log(p2sh_script);
+
+    return p2sh_script;
+
+}
+
+exports.wins_on_for_stored_keys = function(c) {
+    if (c == null) {
+        return false;
+    }
+    if (stored_priv_for_pub(c['yes_user_pubkey'])) {
+        return 'Yes';
+    } else if (stored_priv_for_pub(c['no_user_pubkey'])) {
+        return 'No';
+    }  
+    return 'None'
+}
+
+
+},{"./../lib/branching_transaction_builder":54,"assert":1,"bigi":62,"binstring":64,"bip39":65,"bitcoinjs-lib":118}],59:[function(require,module,exports){
 //var oracle_base = 'https://www.realitykeys.com'
 var settings = {};
 settings.oracle_base = 'https://www.realitykeys.com'
@@ -9222,7 +8713,7 @@ settings.pushtx_livenet = 'both';
 
 module.exports = settings;
 
-},{}],57:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 // (public) Constructor
 function BigInteger(a, b, c) {
   if (!(this instanceof BigInteger))
@@ -10666,7 +10157,7 @@ BigInteger.valueOf = nbv
 
 module.exports = BigInteger
 
-},{"../package.json":60}],58:[function(require,module,exports){
+},{"../package.json":63}],61:[function(require,module,exports){
 (function (Buffer){
 // FIXME: Kind of a weird way to throw exceptions, consider removing
 var assert = require('assert')
@@ -10761,14 +10252,14 @@ BigInteger.prototype.toHex = function(size) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./bigi":57,"assert":1,"buffer":3}],59:[function(require,module,exports){
+},{"./bigi":60,"assert":1,"buffer":3}],62:[function(require,module,exports){
 var BigInteger = require('./bigi')
 
 //addons
 require('./convert')
 
 module.exports = BigInteger
-},{"./bigi":57,"./convert":58}],60:[function(require,module,exports){
+},{"./bigi":60,"./convert":61}],63:[function(require,module,exports){
 module.exports={
   "name": "bigi",
   "version": "1.3.0",
@@ -10831,7 +10322,7 @@ module.exports={
   "_from": "bigi@"
 }
 
-},{}],61:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 (function (Buffer){
 'use strict'
 
@@ -10885,7 +10376,7 @@ var binString = module.exports = function binString(data, options) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":3}],62:[function(require,module,exports){
+},{"buffer":3}],65:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var crypto = require('crypto')
@@ -11014,7 +10505,7 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./wordlists/en.json":65,"assert":1,"buffer":3,"crypto":10,"pbkdf2-compat":63}],63:[function(require,module,exports){
+},{"./wordlists/en.json":68,"assert":1,"buffer":3,"crypto":10,"pbkdf2-compat":66}],66:[function(require,module,exports){
 var crypto = require('crypto')
 
 var exportFn = require('./pbkdf2')
@@ -11028,9 +10519,9 @@ module.exports = {
   __pbkdf2Export: exportFn
 }
 
-},{"./pbkdf2":64,"crypto":10}],64:[function(require,module,exports){
+},{"./pbkdf2":67,"crypto":10}],67:[function(require,module,exports){
 module.exports=require(26)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/pbkdf2-compat/pbkdf2.js":26,"buffer":3}],65:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/pbkdf2-compat/pbkdf2.js":26,"buffer":3}],68:[function(require,module,exports){
 module.exports=[
   "abandon",
   "ability",
@@ -13082,13 +12573,13 @@ module.exports=[
   "zoo"
 ]
 
-},{}],66:[function(require,module,exports){
-arguments[4][57][0].apply(exports,arguments)
-},{"../package.json":69,"/var/www/working/sponsoredwalk.net/node_modules/bigi/lib/bigi.js":57}],67:[function(require,module,exports){
-arguments[4][58][0].apply(exports,arguments)
-},{"./bigi":66,"/var/www/working/sponsoredwalk.net/node_modules/bigi/lib/convert.js":58,"assert":1,"buffer":3}],68:[function(require,module,exports){
-arguments[4][59][0].apply(exports,arguments)
-},{"./bigi":66,"./convert":67,"/var/www/working/sponsoredwalk.net/node_modules/bigi/lib/index.js":59}],69:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
+arguments[4][60][0].apply(exports,arguments)
+},{"../package.json":72,"/var/www/working/sponsoredwalk.net/node_modules/bigi/lib/bigi.js":60}],70:[function(require,module,exports){
+arguments[4][61][0].apply(exports,arguments)
+},{"./bigi":69,"/var/www/working/sponsoredwalk.net/node_modules/bigi/lib/convert.js":61,"assert":1,"buffer":3}],71:[function(require,module,exports){
+arguments[4][62][0].apply(exports,arguments)
+},{"./bigi":69,"./convert":70,"/var/www/working/sponsoredwalk.net/node_modules/bigi/lib/index.js":62}],72:[function(require,module,exports){
 module.exports={
   "name": "bigi",
   "version": "1.3.0",
@@ -13151,7 +12642,7 @@ module.exports={
   "_from": "bigi@^1.1.0"
 }
 
-},{}],70:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 // Base58 encoding/decoding
 // Originally written by Mike Hearn for BitcoinJ
 // Copyright (c) 2011 Google Inc
@@ -13233,7 +12724,7 @@ module.exports = {
   decode: decode
 }
 
-},{}],71:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -13276,65 +12767,65 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"assert":1,"bs58":70,"buffer":3,"crypto":10}],72:[function(require,module,exports){
+},{"assert":1,"bs58":73,"buffer":3,"crypto":10}],75:[function(require,module,exports){
 module.exports=require(7)
-},{"./md5":76,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/create-hash.js":7,"buffer":3,"ripemd160":93,"sha.js":95}],73:[function(require,module,exports){
+},{"./md5":79,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/create-hash.js":7,"buffer":3,"ripemd160":96,"sha.js":98}],76:[function(require,module,exports){
 module.exports=require(8)
-},{"./create-hash":72,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/create-hmac.js":8,"buffer":3}],74:[function(require,module,exports){
+},{"./create-hash":75,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/create-hmac.js":8,"buffer":3}],77:[function(require,module,exports){
 module.exports=require(9)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/helpers.js":9,"buffer":3}],75:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/helpers.js":9,"buffer":3}],78:[function(require,module,exports){
 module.exports=require(10)
-},{"./create-hash":72,"./create-hmac":73,"./pbkdf2":99,"./rng":100,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/index.js":10,"browserify-aes/inject":82,"buffer":3}],76:[function(require,module,exports){
+},{"./create-hash":75,"./create-hmac":76,"./pbkdf2":102,"./rng":103,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/index.js":10,"browserify-aes/inject":85,"buffer":3}],79:[function(require,module,exports){
 module.exports=require(11)
-},{"./helpers":74,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/md5.js":11}],77:[function(require,module,exports){
+},{"./helpers":77,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/md5.js":11}],80:[function(require,module,exports){
 module.exports=require(12)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/EVP_BytesToKey.js":12,"buffer":3}],78:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/EVP_BytesToKey.js":12,"buffer":3}],81:[function(require,module,exports){
 module.exports=require(13)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/aes.js":13,"buffer":3}],79:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/aes.js":13,"buffer":3}],82:[function(require,module,exports){
 module.exports=require(14)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js":14,"buffer":3,"inherits":89,"stream":50}],80:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js":14,"buffer":3,"inherits":92,"stream":50}],83:[function(require,module,exports){
 module.exports=require(15)
-},{"./EVP_BytesToKey":77,"./aes":78,"./cipherBase":79,"./modes":83,"./modes/cbc":84,"./modes/cfb":85,"./modes/ctr":86,"./modes/ecb":87,"./modes/ofb":88,"./streamCipher":90,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/decrypter.js":15,"buffer":3,"inherits":89}],81:[function(require,module,exports){
+},{"./EVP_BytesToKey":80,"./aes":81,"./cipherBase":82,"./modes":86,"./modes/cbc":87,"./modes/cfb":88,"./modes/ctr":89,"./modes/ecb":90,"./modes/ofb":91,"./streamCipher":93,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/decrypter.js":15,"buffer":3,"inherits":92}],84:[function(require,module,exports){
 module.exports=require(16)
-},{"./EVP_BytesToKey":77,"./aes":78,"./cipherBase":79,"./modes":83,"./modes/cbc":84,"./modes/cfb":85,"./modes/ctr":86,"./modes/ecb":87,"./modes/ofb":88,"./streamCipher":90,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/encrypter.js":16,"buffer":3,"inherits":89}],82:[function(require,module,exports){
+},{"./EVP_BytesToKey":80,"./aes":81,"./cipherBase":82,"./modes":86,"./modes/cbc":87,"./modes/cfb":88,"./modes/ctr":89,"./modes/ecb":90,"./modes/ofb":91,"./streamCipher":93,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/encrypter.js":16,"buffer":3,"inherits":92}],85:[function(require,module,exports){
 module.exports=require(17)
-},{"./decrypter":80,"./encrypter":81,"./modes":83,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/inject.js":17}],83:[function(require,module,exports){
+},{"./decrypter":83,"./encrypter":84,"./modes":86,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/inject.js":17}],86:[function(require,module,exports){
 module.exports=require(18)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes.js":18}],84:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes.js":18}],87:[function(require,module,exports){
 module.exports=require(19)
-},{"../xor":91,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cbc.js":19}],85:[function(require,module,exports){
+},{"../xor":94,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cbc.js":19}],88:[function(require,module,exports){
 module.exports=require(20)
-},{"../xor":91,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb.js":20,"buffer":3}],86:[function(require,module,exports){
+},{"../xor":94,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb.js":20,"buffer":3}],89:[function(require,module,exports){
 module.exports=require(21)
-},{"../xor":91,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ctr.js":21,"buffer":3}],87:[function(require,module,exports){
+},{"../xor":94,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ctr.js":21,"buffer":3}],90:[function(require,module,exports){
 module.exports=require(22)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ecb.js":22}],88:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ecb.js":22}],91:[function(require,module,exports){
 module.exports=require(23)
-},{"../xor":91,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ofb.js":23,"buffer":3}],89:[function(require,module,exports){
+},{"../xor":94,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ofb.js":23,"buffer":3}],92:[function(require,module,exports){
 module.exports=require(36)
-},{"/usr/local/lib/node_modules/browserify/node_modules/inherits/inherits_browser.js":36}],90:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/inherits/inherits_browser.js":36}],93:[function(require,module,exports){
 module.exports=require(24)
-},{"./aes":78,"./cipherBase":79,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/streamCipher.js":24,"buffer":3,"inherits":89}],91:[function(require,module,exports){
+},{"./aes":81,"./cipherBase":82,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/streamCipher.js":24,"buffer":3,"inherits":92}],94:[function(require,module,exports){
 module.exports=require(25)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/xor.js":25,"buffer":3}],92:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/xor.js":25,"buffer":3}],95:[function(require,module,exports){
 module.exports=require(26)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/pbkdf2-compat/pbkdf2.js":26,"buffer":3}],93:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/pbkdf2-compat/pbkdf2.js":26,"buffer":3}],96:[function(require,module,exports){
 module.exports=require(27)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/ripemd160/lib/ripemd160.js":27,"buffer":3}],94:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/ripemd160/lib/ripemd160.js":27,"buffer":3}],97:[function(require,module,exports){
 module.exports=require(28)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js":28}],95:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js":28}],98:[function(require,module,exports){
 module.exports=require(29)
-},{"./hash":94,"./sha1":96,"./sha256":97,"./sha512":98,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/index.js":29,"buffer":3}],96:[function(require,module,exports){
+},{"./hash":97,"./sha1":99,"./sha256":100,"./sha512":101,"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/index.js":29,"buffer":3}],99:[function(require,module,exports){
 module.exports=require(30)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha1.js":30,"util":53}],97:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha1.js":30,"util":53}],100:[function(require,module,exports){
 module.exports=require(31)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha256.js":31,"util":53}],98:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha256.js":31,"util":53}],101:[function(require,module,exports){
 module.exports=require(32)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha512.js":32,"util":53}],99:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha512.js":32,"util":53}],102:[function(require,module,exports){
 module.exports=require(33)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/pbkdf2.js":33,"pbkdf2-compat/pbkdf2":92}],100:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/pbkdf2.js":33,"pbkdf2-compat/pbkdf2":95}],103:[function(require,module,exports){
 module.exports=require(34)
-},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/rng.js":34,"buffer":3,"crypto":2}],101:[function(require,module,exports){
+},{"/usr/local/lib/node_modules/browserify/node_modules/crypto-browserify/rng.js":34,"buffer":3,"crypto":2}],104:[function(require,module,exports){
 var assert = require('assert')
 var BigInteger = require('bigi')
 
@@ -13410,7 +12901,7 @@ Curve.prototype.validate = function(Q) {
 
 module.exports = Curve
 
-},{"./point":105,"assert":1,"bigi":68}],102:[function(require,module,exports){
+},{"./point":108,"assert":1,"bigi":71}],105:[function(require,module,exports){
 module.exports={
   "secp128r1": {
     "p": "fffffffdffffffffffffffffffffffff",
@@ -13477,7 +12968,7 @@ module.exports={
   }
 }
 
-},{}],103:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 var Point = require('./point')
 var Curve = require('./curve')
 
@@ -13489,7 +12980,7 @@ module.exports = {
   getCurveByName: getCurveByName
 }
 
-},{"./curve":101,"./names":104,"./point":105}],104:[function(require,module,exports){
+},{"./curve":104,"./names":107,"./point":108}],107:[function(require,module,exports){
 var BigInteger = require('bigi')
 
 var curves = require('./curves')
@@ -13512,7 +13003,7 @@ function getCurveByName(name) {
 
 module.exports = getCurveByName
 
-},{"./curve":101,"./curves":102,"bigi":68}],105:[function(require,module,exports){
+},{"./curve":104,"./curves":105,"bigi":71}],108:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var BigInteger = require('bigi')
@@ -13773,7 +13264,7 @@ Point.prototype.toString = function () {
 module.exports = Point
 
 }).call(this,require("buffer").Buffer)
-},{"assert":1,"bigi":68,"buffer":3}],106:[function(require,module,exports){
+},{"assert":1,"bigi":71,"buffer":3}],109:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var base58check = require('bs58check')
@@ -13843,7 +13334,7 @@ Address.prototype.toString = Address.prototype.toBase58Check
 module.exports = Address
 
 }).call(this,require("buffer").Buffer)
-},{"./networks":117,"./scripts":120,"./types":123,"assert":1,"bs58check":71,"buffer":3}],107:[function(require,module,exports){
+},{"./networks":120,"./scripts":123,"./types":126,"assert":1,"bs58check":74,"buffer":3}],110:[function(require,module,exports){
 var bs58check = require('bs58check')
 
 function decode() {
@@ -13863,7 +13354,7 @@ module.exports = {
   encode: encode
 }
 
-},{"bs58check":71}],108:[function(require,module,exports){
+},{"bs58check":74}],111:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var opcodes = require('./opcodes')
@@ -14045,7 +13536,7 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./opcodes":118,"assert":1,"buffer":3}],109:[function(require,module,exports){
+},{"./opcodes":121,"assert":1,"buffer":3}],112:[function(require,module,exports){
 var crypto = require('crypto')
 
 function hash160(buffer) {
@@ -14087,7 +13578,7 @@ module.exports = {
   HmacSHA512: HmacSHA512
 }
 
-},{"crypto":75}],110:[function(require,module,exports){
+},{"crypto":78}],113:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var crypto = require('./crypto')
@@ -14287,7 +13778,7 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./crypto":109,"./ecsignature":113,"./types":123,"assert":1,"bigi":68,"buffer":3}],111:[function(require,module,exports){
+},{"./crypto":112,"./ecsignature":116,"./types":126,"assert":1,"bigi":71,"buffer":3}],114:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var base58check = require('bs58check')
@@ -14375,7 +13866,7 @@ ECKey.prototype.sign = function(hash) {
 module.exports = ECKey
 
 }).call(this,require("buffer").Buffer)
-},{"./ecdsa":110,"./ecpubkey":112,"./networks":117,"./types":123,"assert":1,"bigi":68,"bs58check":71,"buffer":3,"crypto":75,"ecurve":103}],112:[function(require,module,exports){
+},{"./ecdsa":113,"./ecpubkey":115,"./networks":120,"./types":126,"assert":1,"bigi":71,"bs58check":74,"buffer":3,"crypto":78,"ecurve":106}],115:[function(require,module,exports){
 (function (Buffer){
 var crypto = require('./crypto')
 var ecdsa = require('./ecdsa')
@@ -14433,7 +13924,7 @@ ECPubKey.prototype.toHex = function() {
 module.exports = ECPubKey
 
 }).call(this,require("buffer").Buffer)
-},{"./address":106,"./crypto":109,"./ecdsa":110,"./networks":117,"./types":123,"buffer":3,"ecurve":103}],113:[function(require,module,exports){
+},{"./address":109,"./crypto":112,"./ecdsa":113,"./networks":120,"./types":126,"buffer":3,"ecurve":106}],116:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var enforceType = require('./types')
@@ -14563,7 +14054,7 @@ ECSignature.prototype.toScriptSignature = function(hashType) {
 module.exports = ECSignature
 
 }).call(this,require("buffer").Buffer)
-},{"./types":123,"assert":1,"bigi":68,"buffer":3}],114:[function(require,module,exports){
+},{"./types":126,"assert":1,"bigi":71,"buffer":3}],117:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var base58check = require('bs58check')
@@ -14873,7 +14364,7 @@ HDNode.prototype.toString = HDNode.prototype.toBase58
 module.exports = HDNode
 
 }).call(this,require("buffer").Buffer)
-},{"./crypto":109,"./eckey":111,"./ecpubkey":112,"./networks":117,"./types":123,"assert":1,"bigi":68,"bs58check":71,"buffer":3,"ecurve":103}],115:[function(require,module,exports){
+},{"./crypto":112,"./eckey":114,"./ecpubkey":115,"./networks":120,"./types":126,"assert":1,"bigi":71,"bs58check":74,"buffer":3,"ecurve":106}],118:[function(require,module,exports){
 module.exports = {
   Address: require('./address'),
   base58check: require('./base58check'),
@@ -14894,7 +14385,7 @@ module.exports = {
   Wallet: require('./wallet')
 }
 
-},{"./address":106,"./base58check":107,"./bufferutils":108,"./crypto":109,"./ecdsa":110,"./eckey":111,"./ecpubkey":112,"./ecsignature":113,"./hdnode":114,"./message":116,"./networks":117,"./opcodes":118,"./script":119,"./scripts":120,"./transaction":121,"./transaction_builder":122,"./wallet":124}],116:[function(require,module,exports){
+},{"./address":109,"./base58check":110,"./bufferutils":111,"./crypto":112,"./ecdsa":113,"./eckey":114,"./ecpubkey":115,"./ecsignature":116,"./hdnode":117,"./message":119,"./networks":120,"./opcodes":121,"./script":122,"./scripts":123,"./transaction":124,"./transaction_builder":125,"./wallet":127}],119:[function(require,module,exports){
 (function (Buffer){
 var bufferutils = require('./bufferutils')
 var crypto = require('./crypto')
@@ -14953,7 +14444,7 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./bufferutils":108,"./crypto":109,"./ecdsa":110,"./ecpubkey":112,"./ecsignature":113,"./networks":117,"bigi":68,"buffer":3,"ecurve":103}],117:[function(require,module,exports){
+},{"./bufferutils":111,"./crypto":112,"./ecdsa":113,"./ecpubkey":115,"./ecsignature":116,"./networks":120,"bigi":71,"buffer":3,"ecurve":106}],120:[function(require,module,exports){
 // https://en.bitcoin.it/wiki/List_of_address_prefixes
 // Dogecoin BIP32 is a proposed standard: https://bitcointalk.org/index.php?topic=409731
 
@@ -15076,7 +14567,7 @@ function estimateFee(type) {
 
 module.exports = networks
 
-},{}],118:[function(require,module,exports){
+},{}],121:[function(require,module,exports){
 module.exports = {
   // push value
   OP_FALSE     : 0,
@@ -15216,7 +14707,7 @@ module.exports = {
   OP_INVALIDOPCODE : 255
 }
 
-},{}],119:[function(require,module,exports){
+},{}],122:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var bufferutils = require('./bufferutils')
@@ -15354,7 +14845,7 @@ Script.prototype.toHex = function() {
 module.exports = Script
 
 }).call(this,require("buffer").Buffer)
-},{"./bufferutils":108,"./crypto":109,"./opcodes":118,"./types":123,"assert":1,"buffer":3}],120:[function(require,module,exports){
+},{"./bufferutils":111,"./crypto":112,"./opcodes":121,"./types":126,"assert":1,"buffer":3}],123:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var enforceType = require('./types')
@@ -15618,7 +15109,7 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./ecsignature":113,"./opcodes":118,"./script":119,"./types":123,"assert":1,"buffer":3,"ecurve":103}],121:[function(require,module,exports){
+},{"./ecsignature":116,"./opcodes":121,"./script":122,"./types":126,"assert":1,"buffer":3,"ecurve":106}],124:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var bufferutils = require('./bufferutils')
@@ -15966,7 +15457,7 @@ Transaction.prototype.validateInput = function(index, prevOutScript, pubKey, buf
 module.exports = Transaction
 
 }).call(this,require("buffer").Buffer)
-},{"./address":106,"./bufferutils":108,"./crypto":109,"./ecsignature":113,"./opcodes":118,"./script":119,"./scripts":120,"./types":123,"assert":1,"buffer":3}],122:[function(require,module,exports){
+},{"./address":109,"./bufferutils":111,"./crypto":112,"./ecsignature":116,"./opcodes":121,"./script":122,"./scripts":123,"./types":126,"assert":1,"buffer":3}],125:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var scripts = require('./scripts')
@@ -16241,7 +15732,7 @@ TransactionBuilder.prototype.sign = function(index, privKey, redeemScript, hashT
 module.exports = TransactionBuilder
 
 }).call(this,require("buffer").Buffer)
-},{"./ecpubkey":112,"./ecsignature":113,"./script":119,"./scripts":120,"./transaction":121,"assert":1,"buffer":3}],123:[function(require,module,exports){
+},{"./ecpubkey":115,"./ecsignature":116,"./script":122,"./scripts":123,"./transaction":124,"assert":1,"buffer":3}],126:[function(require,module,exports){
 (function (Buffer){
 module.exports = function enforce(type, value) {
   switch (type) {
@@ -16285,7 +15776,7 @@ function getName(fn) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":3}],124:[function(require,module,exports){
+},{"buffer":3}],127:[function(require,module,exports){
 (function (Buffer){
 var assert = require('assert')
 var bufferutils = require('./bufferutils')
@@ -16648,4 +16139,4 @@ Wallet.prototype.createTx = Wallet.prototype.createTransaction
 module.exports = Wallet
 
 }).call(this,require("buffer").Buffer)
-},{"./address":106,"./bufferutils":108,"./hdnode":114,"./networks":117,"./script":119,"./transaction_builder":122,"./types":123,"assert":1,"buffer":3,"crypto":75}]},{},[55]);
+},{"./address":109,"./bufferutils":111,"./hdnode":117,"./networks":120,"./script":122,"./transaction_builder":125,"./types":126,"assert":1,"buffer":3,"crypto":78}]},{},[57]);
