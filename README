@@ -2,3 +2,11 @@ This app helps you set up sponsorship contracts.
 
 It is designed to use RunKeeper, but could be easily be tweaked for other purposes.
 
+Anything under the js/ directory can be managed with node.js.
+
+Build it from inside the js/ directory with:
+npm run build
+
+Run tests with:
+npm test
+
