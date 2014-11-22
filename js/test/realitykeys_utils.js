@@ -65,8 +65,6 @@ describe('Transaction Cycle', function() {
     // https://www.realitykeys.com/api/v1/runkeeper/252/?accept_terms_of_service=current
     var yes_fact = {"no_pubkey": "0309fee1726ed80f80869951de4b77115b1be64b77317c80b1f5f09cc9a78c978d", "user_profile": "edochan", "settlement_date": "2014-07-19", "objection_period_secs": 86400, "human_resolution_scheduled_datetime": null, "measurement": "cumulative_distance", "evaluation_method": "ge", "is_user_authenticated": true, "objection_fee_satoshis_paid": 0, "machine_resolution_scheduled_datetime": "2014-07-19 00:00:00", "user_id": "29908850", "goal": "100", "created_datetime": "2014-07-19 03:54:33", "winner": "Yes", "value": "100", "id": 244, "source": "runkeeper", "yes_pubkey": "0309992b4062fc9cb29e681fef394f88182a49e31a6a859a10be38664603a43fe7", "activity": "walking", "objection_fee_satoshis_due": 1000000, "user_name": "edochan", "winner_privkey": "L3k6Qy7SYXSLs93Bcf7YfQJsjFeDy4oLgFuMtstfwZkFSAckEdwf"};
 
-
-
     // testnet contract for fact 243 (yes)
     var c243t = no_fact; // NB This will have more fields filled than we would have in reality
     c243t['yes_user_pubkey'] = yes_user_pubkey;
@@ -103,7 +101,6 @@ describe('Transaction Cycle', function() {
     var demo_unspent_txes = bitcoin_utils.format_unspent_response(demo_unspent_blockchain, 'blockchain', c243m_fund_address);
 
     var c243m_tx_hex = realitykeys_utils.hex_for_claim_execution(cash_out_address, no_user_privkey, c243m['winner_privkey'], demo_unspent_txes['unspent_outputs'][0], c243m, 'livenet');
-
 
     it('produces the expected keys from mnemonics', function() {
         assert(yes_user_pubkey == '02f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e', 'Yes user pubkey as expected');;
