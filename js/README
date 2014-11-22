@@ -1,0 +1,10 @@
+The JavaScript used for this app can be managed with node.js.
+
+Build it from inside the js/ directory with:
+npm run build
+This will create a file called bundle.js under dist/ that is referenced by the HTML pages.
+
+The HTML pages also reference a file called populate.js, which is not kept in bundle.js.
+
+Run tests with:
+npm test
