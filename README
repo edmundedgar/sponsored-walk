@@ -1,6 +1,103 @@
-This app helps you set up sponsorship contracts.
+A) Introduction
 
+This app helps you set up sponsorship contracts based on outcomes monitored by Reality Keys.
 It is designed to use RunKeeper, but could be easily be tweaked for other purposes.
 
-Anything under the js/ directory can be managed with node.js.
-See the js/README for more information.
+For example, your site may allow users to register exercise goals that they will try to meet.
+They can then invite friends to sponsor them, such that they or a charity will get the money if they meet their goals by a certain date. 
+If they do not meet their goals, the sponsoring party can reclaim the funds.
+
+Until the issue is resolved, the funds are held in escrow by the Bitcoin network.
+Funds can be unlocked at any time by the two parties cooperating, although we do not currently provide a UI for this.
+
+
+B) Process
+
+The general process is as follows:
+1) Site owner creates a private/public keypair, which they store using a mnemonic.
+2) Site owner sets up contracts they want to invite people to sponsor and store them either in a database (see /api/resources) or in the HTML of a static page.
+3) User creates a private/public keypair, which they store using a mnemonic.
+4) User visits a page representing one of the contracts created in Step 2 (identified by its ID), which generates a P2SH address.
+5) User pays the P2SH address.
+6) Time passes.
+7a) If the result was "yes", the site owner visits the /claim.html page and claims the funds.
+7b) If the result was "no", the user visits the original page (or the /claim.html page) and claims the funds back.
+These steps will be described in more detail below.
+
+
+C) Server-side APIs
+
+This is a client-side HTML/JavaScript application, but it expects to talk to two custom server-side services. 
+Example implementations of the server-side services are provided in PHP under api/.
+If the HTML page will be hosted somewhere other than the site providing the API, the API should supply CORS headers to avoid cross-domain restrictions.
+
+1) /api/resources/
+
+An API providing information about the contracts, for example, "Ed to run 10km by December 31st".
+
+For RunKeeper it should provide the following for any given ID parameter:
+
+General fields:
+    title: A human-readable description of the contract.
+    sponsored_pubkey: The public key of the user who should receive the funds if successful.
+    objection_period_secs: The amount of time (in seconds) Reality Keys should wait for objections. See the "How it works" section at https://www.realitykeys.com.
+    settlement_date: The deadline on which the status should be checked and resolved.
+
+RunKeeper-specific fields:
+    user_id: The ID of the user in RunKeeper.
+    activity: The activity being measured in RunKeeper.
+    measurement: The thing to be measured (cumulative_distance or total_distance).
+    goal: The goal in meters.
+
+The above is loaded when the HTML page is loaded using the populate.js script.
+If the HTML page is generated dynamically, you may prefer to embed the same information in form fields in the HTML source code.
+
+2) /api/storage/
+
+An API allowing the application to store and fetch back information required to recreate the contract and claim funds from the escrow address.
+This information is stored when the P2SH address is created for the user to pay.
+We use the following:
+    site_resource_id: The site's internal ID of the contract, shared with the resources API.
+    yes_user_pubkey: The public key of the user representing a "yes" result.
+    no_user_pubkey: The public key of the user representing a "no" result.
+    realitykeys_id: The ID of the Reality Key created for the 
+    yes_pubkey: The Reality Key representing "Yes". (This can also be fetched from Reality Keys using realitykeys_id.)
+    no_pubkey: The Reality Key representing "No". (This can also be fetched from Reality Keys using realitykeys_id.)
+    address: The generated escrow address which the user is asked to fund. (This can also be recreated using the four _pubkey fields above.)
+
+
+D) The JavaScript code
+
+The bitcoin transaction creation is handled by bitcoinjs-lib.
+https://github.com/bitcoinjs/bitcoinjs-lib
+
+This is supplemented by the following library for creating branching transactions (a+b OR c+d OR a+c).
+https://github.com/edmundedgar/bitcoin-branching-transaction-builder
+
+The main application-specific code is in src/main.js.
+See js/README for instructions on building the code with the required dependences using npm.
+
+
+E) Detailed flow
+
+Funding page:
+1) Initially we only show fields the user needs to see to fund or claim. However, other fields used such as the parties' keys can be inspected by toggling a link at the bottom of the page, which removes the "hide-advanced" CSS class.
+2) Once the page loads, a hidden form is populated from the resource API using the ID found in the URL.
+3) The page contacts realitykeys.com to register a fact for the conditions specified in the hidden form. This request includes a "use_existing" parameter which will cause Reality Keys to check if a fact has already been registered with identical conditions, so the Reality Keys keys (and the per-user-key address created below) will be the same every time.
+4) If the user does not have a stored mnemonic, one is created for them using BIP 39.
+5) The user is prompted to either store the mnemonic in local storage or confirm that they have made a separate note of it.
+6) Once the mnemonic storage or confirmation is done, the rest of the page is shown allowing the user to proceed.
+7) A P2SH address is created for the specified keys. This will be automatically updated if the keys are changed, or if the conditions of the Reality Key are changed, resulting in new Reality Keys.
+8) The balance in the P2SH address is checked using blockchain.info, allowing us to display any funds that have already been paid for this address.
+9) The "Check Address" button will force a recheck of the address balance.
+10) The user can add funds to the address at any time by paying with their normal bitcoin wallet.
+11) It is technically possible, although largely pointless, to keep funding the address even once the fact has been settled.
+12) If the fact has been settled and the user has one, the winning Reality Key private key will be added to a hidden field.
+13) At this point the user is able to claim funds by inserting the bitcoin address of their choice and clicking the "Claim funds" button. This creates a transaction sending the funds in the P2SH address to their address, and signs it with the user's key (based on their mnemonic) and the winning Reality Key private key.
+14) The signed transaction is broadcast to the network via blockchain.info. It is currently a non-standard transaction, so only a minority of miners (currently Eligius, Discus Fish and Bitcoin Affiliate) will mine it. As a result it may take a few hours to confirm. This should improve when the next version of bitcoind is released, as the pattern will no longer be treated as non-standard.
+
+Claim page:
+This works almost the same way as the funding page, but is intended for the site owner to check up on, and claim when ready, multiple donations in one place.
+Instead of populating the form from the Resource API to create a single address, we check anything with a matching resource ID from the Contract API, corresponding to multiple funding addresses.
+Having fetched the outstanding contracts, we check the balance in each. Some may represent addresses that were never funded, and these are skipped without being displayed.
+
