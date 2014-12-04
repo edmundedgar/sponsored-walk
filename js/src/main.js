@@ -59,7 +59,7 @@
         //$('#your-private-key').val(k['priv']);
         $('#your-private-key').val(k['priv']);
         $('#your-pub-key').val(k['pub']);
-        update_funding_address();
+        update_key_form();
 
     }
 
@@ -394,8 +394,8 @@
 
         var row = section.find('.contract-data-template').clone().removeClass('contract-data-template').addClass('contract-data-row').attr('data-address',c['address']);
 
-        row.find('.our-pub-key').val(c['no_user_pubkey']);
-        row.find('.your-pub-key').val(c['yes_user_pubkey']);
+        row.find('.no-user-pub-key').val(c['no_user_pubkey']);
+        row.find('.yes-user-pub-key').val(c['yes_user_pubkey']);
         row.find('.yes-pub-key').val(c['yes_pubkey']);
         row.find('.no-pub-key').val(c['no_pubkey']);
         row.find('.no-pub-key').val(c['no_pubkey']);
@@ -548,7 +548,7 @@
                     $('#winner-privkey').val(data['winner_privkey']);
                     $('body').addClass('settled');
                 }
-                update_funding_address();
+                update_key_form();
             },
             function(data) {
                 bootbox.alert('Sorry, could not register the fact with Reality Keys.');
@@ -679,6 +679,15 @@
 
     }
 
+    function key_check(keys) {
+        if (!keys['yes_user_pubkey']) return false;
+        if (!keys['no_user_pubkey']) return false;
+        if (!keys['yes_pubkey']) return false;
+        if (!keys['no_pubkey']) return false;
+        if (!keys['network']) return false;
+        return true;
+    }
+
     function update_funding_address() {
 
         if ($('body').hasClass('claim-page')) {
@@ -686,14 +695,19 @@
         }
         var network = $('#network').val();
         var c = {
-            'yes_user_pubkey': $('#our-pub-key').val(),
-            'no_user_pubkey': $('#your-pub-key').val(),
+            'yes_user_pubkey': $('#yes-user-pub-key').val(),
+            'no_user_pubkey': $('#no-user-pub-key').val(),
             'yes_pubkey': $('#yes-pub-key').val(),
             'no_pubkey': $('#no-pub-key').val(),
             'id': $('#reality-key-id').val(),
             'network': network,
             'site_resource_id': $('#site-resource-id').val()
         };
+        if (!key_check(c)) {
+            $('#funding-address').val('');
+            return false;
+        }
+        console.log(c);
         //console.log('c:',c);
         var addr = realitykeys_utils.p2sh_address(c);
         c['address'] = addr; // used by store
@@ -768,7 +782,7 @@
 
     function setup_claim_multiple_form(frm) {
 
-        var our_pub_key = $('#our-pub-key').val();
+        var our_pub_key = $('#your-pub-key').val();
         if (our_pub_key == null) {
             //console.log('cannot set up claim form, our pub key not found');
             return;
@@ -895,16 +909,28 @@
 
     }
 
+    function update_key_form() {
+        var wins_on = $('win-on-yes').is(':checked') ? 'yes' : 'no';
+        if (wins_on == 'yes') {
+            $('#yes-user-pub-key').val($('#your-pub-key').val());
+            $('#no-user-pub-key').val($('#counterparty-pub-key').val());
+        } else {
+            $('#yes-user-pub-key').val($('#counterparty-pub-key').val());
+            $('#no-user-pub-key').val($('#your-pub-key').val());
+        }
+        update_funding_address();
+    }
+
     function setup_make_address_form(frm) {
         $('#make-address-button').unbind('click').click( function() {
             update_funding_address();
             return false;
         });
-        $('#our-pub-key').change(update_funding_address);
-        $('#your-pub-key').change(update_funding_address);
-        $('#yes-pub-key').change(update_funding_address);
-        $('#no-pub-key').change(update_funding_address);
-        $('#network').change(update_funding_address);
+        $('#counterparty-pub-key').change(update_key_form);
+        $('#your-pub-key').change(update_key_form);
+        $('#yes-pub-key').change(update_key_form);
+        $('#no-pub-key').change(update_key_form);
+        $('#network').change(update_key_form);
 
         return false;
     }
@@ -987,7 +1013,6 @@
     The claim page may use the same form to hold both sets of values, in which case it should be passed in twice.
     */
     function setup_claim_form(claim_frm, address_frm) {
-
         claim_frm.find('.claim-from-address').unbind('click').click( function( ) {
             var withdraw_to_addr = claim_frm.find('.withdraw-to-address').val();
             if (withdraw_to_addr == '') {
@@ -997,13 +1022,13 @@
             var network = $('#network').val();
             // Recreate the address to make sure it matches the keys
             var keys = {
-                'yes_user_pubkey': address_frm.find('.your-pub-key').val(),
-                'no_user_pubkey': address_frm.find('.our-pub-key').val(),
+                'yes_user_pubkey': address_frm.find('.yes-user-pub-key').val(),
+                'no_user_pubkey': address_frm.find('.no-user-pub-key').val(),
                 'yes_pubkey': address_frm.find('.yes-pub-key').val(),
                 'no_pubkey': address_frm.find('.no-pub-key').val(),
                 'network': network
             };
-            //console.log("using keys to get p2sh: ",keys);
+            console.log("using keys to get p2sh: ",keys);
             var addr = realitykeys_utils.p2sh_address(keys);
             if (addr == null) {
                 return false;
@@ -1012,9 +1037,15 @@
             keys['address'] = addr;
             // Only check this on the main page, which has a funding-address field.
             if ($('#funding-address').length && $('#funding-address').val() != addr) {
-                //console.log("check addr was",$('#funding-address').val(),"but recreated addr was",addr,keys);
-                bootbox.alert('The addresses do not the match keys');
-                return false;
+                // Flip the keys if we were on the other side of this
+                keys['yes_user_pubkey'] = address_frm.find('.your-pub-key').val(),
+                keys['no_user_pubkey'] = address_frm.find('.our-pub-key').val(),
+                addr = realitykeys_utils.p2sh_address(keys);
+                keys['address'] = addr;
+                if ($('#funding-address').length && $('#funding-address').val() != addr) {
+                    alert('The addresses do not the match keys');
+                    return false;
+                }
             }
 
             var url_info = unspent_url_info(addr, network);;
@@ -1071,5 +1102,6 @@
             handle_submit_create_reality_key_form($('#create-reality-key-form'));
         }
         $('body').addClass('initialized');
+        console.log('done init');
 
     }

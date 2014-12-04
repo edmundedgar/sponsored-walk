@@ -67,6 +67,28 @@ $db = array(
         'settlement_date' => '2014-11-23',
         'objection_period_secs' => 1 * 60 * 60, 
         'title' => 'Edochan to walk 5000m by November 23rd, verified by GPS'
+    ),
+    98780=> array(
+        'sponsored_pubkey' => '02f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e',
+        //'setting_default_days_in_future' => '14', 
+        'user_id' => '29908850',
+        'activity' => 'walking',
+        'measurement' => 'cumulative_distance',
+        'goal' => '5',
+        'settlement_date' => '2014-12-04',
+        'objection_period_secs' => 1 * 60 * 60, 
+        'title' => 'Edochan to walk 5m by November 23rd, verified by GPS'
+    ),
+    98781=> array(
+        'sponsored_pubkey' => '02f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e',
+        //'setting_default_days_in_future' => '14', 
+        'user_id' => '29908850',
+        'activity' => 'walking',
+        'measurement' => 'cumulative_distance',
+        'goal' => '5000',
+        'settlement_date' => '2014-12-04',
+        'objection_period_secs' => 1 * 60 * 60, 
+        'title' => 'Edochan to walk 5000m by November 23rd, verified by GPS'
     )
 );
 

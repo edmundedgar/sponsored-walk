@@ -41,7 +41,7 @@ $(function() {
         $('#goal').val(data['goal']); 
         $('#settlement_date').val(data['settlement_date']); 
         //$('#setting_default_days_in_future').val(data['setting_default_days_in_future']);
-        $('#our-pub-key').val(data['sponsored_pubkey']);
+        $('#counterparty-pub-key').val(data['sponsored_pubkey']);
         $('#objection_period_secs').val(data['objection_period_secs']);
         main.initialize_page();
     }).fail( function(data) {

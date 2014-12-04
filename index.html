@@ -69,6 +69,8 @@
         <br />
         <br />
         Your Private Key: <input type="text" id="your-private-key" size="70" />
+        <br />
+        Your Public Key: <input type="text" id="your-pub-key" size="70" />
         </div>
     </form>
 
@@ -95,6 +97,10 @@
     <br />
     Objection period <input size="8" type="text" id="objection_period_secs" name="objection_period_secs" placeholder="Objection period (seconds)" value="" class=""> seconds
     <br />
+    You get paid on 
+    Yes <input type="radio" name="win-on" id="win-on-yes" value="yes" />
+    No <input type="radio" checked name="win-on" id="win-on-no" value="no" />
+    <br />
     Hard-coded reality key ID (for debugging)
     <input type="text" id="override-with-existing-fact-id" value="" name="override-with-existing-fact-id" />
 </form>
@@ -112,30 +118,38 @@
     <br />
     Your Site ID: <input size="7" class="site-resource-id" id="site-resource-id" type="text" value="1234" />
     <br />
+    Counterparty Public Key: <input size="66" class="pubkey counterparty-pub-key" id="counterparty-pub-key" type="text" value="" />
     <table>
     <tr>
     <td>
-        Our key
+        &nbsp;
     </td>
     <td>
-        <input size="66" class="pubkey our-pub-key" id="our-pub-key" type="text" value="02f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e" />
+        Yes
     </td>
     <td>
-        Your key
+        No
+    </td>
+    </tr>
+    <tr>
+    </tr>
+    <tr>
+    <td>
+       Parties' keys
     </td>
     <td>
-        <input size="66" class="pubkey your-pub-key" id="your-pub-key" type="text" value="" />
+        <input size="66" class="pubkey yes-user-pub-key" id="yes-user-pub-key" type="text" value="" />
+    </td>
+    <td>
+        <input size="66" class="pubkey no-user-pub-key" id="no-user-pub-key" type="text" value="" />
     </td>
     </tr>
     <tr>
     <td>
-        Yes key
+        Reality keys
     </td>
     <td>
         <input size="66" class="pubkey yes-pub-key" id="yes-pub-key" type="text" />
-    </td>
-    <td>
-        No key
     </td>
     <td>
         <input size="66" class="pubkey no-pub-key" id="no-pub-key" type="text" />
@@ -144,7 +158,7 @@
     </table>
 
     <select id="network" class="network">
-        <option selected="selected" value="livenet">Bitcoins (Use at your own risk!)</option>
+        <option selected="selected" value="livenet">Bitcoins</option>
         <option value="testnet">Testnet Coins</option>
     </select>
 
@@ -176,7 +190,7 @@
     <br />
     </div>
     Address <input size="38" id="withdraw-to-address" class="withdraw-to-address" type="text" /> 
-    <input id="claim-from-address" type="submit" class="btn btn-primary claim-from-address" value="Claim funds" />
+    <input id="claim-from-address" class="btn btn-primary claim-from-address" value="Claim funds" />
 </form>
 </div>
 
