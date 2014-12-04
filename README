@@ -8,16 +8,17 @@ They can then invite friends to sponsor them, such that they or a charity will g
 If they do not meet their goals, the sponsoring party can reclaim the funds.
 
 Until the issue is resolved, the funds are held in escrow by the Bitcoin network.
-Funds can be unlocked at any time by the two parties cooperating, although we do not currently provide a UI for this.
+Once Reality Keys resolves the outcome, the winner can collect the funds.
+Funds can also be unlocked at any time by the two parties cooperating, although we do not currently provide a UI for this.
 
 
 B) Process
 
 The general process is as follows:
-1) Site owner creates a private/public keypair, which they store using a mnemonic.
-2) Site owner sets up contracts they want to invite people to sponsor and store them either in a database (see /api/resources) or in the HTML of a static page.
+1) Site owner visits /index.html and creates a private/public keypair, which they store using a mnemonic.
+2) Site owner sets up contracts they want to invite people to sponsor and store them, along with the public key created in the previous step, either in a database (see /api/resources) or in the HTML of a static page.
 3) User creates a private/public keypair, which they store using a mnemonic.
-4) User visits a page representing one of the contracts created in Step 2 (identified by its ID), which generates a P2SH address.
+4) User visits a page (index.html?id=xxx) representing one of the contracts created in Step 2 (identified by its ID), which generates a P2SH address.
 5) User pays the P2SH address.
 6) Time passes.
 7a) If the result was "yes", the site owner visits the /claim.html page and claims the funds.
@@ -64,6 +65,8 @@ We use the following:
     yes_pubkey: The Reality Key representing "Yes". (This can also be fetched from Reality Keys using realitykeys_id.)
     no_pubkey: The Reality Key representing "No". (This can also be fetched from Reality Keys using realitykeys_id.)
     address: The generated escrow address which the user is asked to fund. (This can also be recreated using the four _pubkey fields above.)
+
+In addition to the above, the site talks to blockchain.info and realitykeys.com.
 
 
 D) The JavaScript code
