@@ -25,6 +25,14 @@ exports.format_pubkey = function(txt) {
     }
 }
 
+exports.format_privkey = function(txt) {
+    if (/^[0-9a-zA-Z]+$/.test(txt)) {
+        return txt;
+    } else {
+        return null;
+    }
+}
+
 exports.format_network = function(txt) {
     if (txt == 'testnet') {
         return 'testnet';

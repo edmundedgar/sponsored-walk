@@ -297,12 +297,6 @@
         }
     }
 
-    
-
-
-
-/// NO MORE UI ABOVE THIS LINE
-
     function execute_claim(to_addr, c, txes, user_privkey, winner_privkey, network) {
 
         var i;
@@ -360,9 +354,10 @@
                             var txid = response['data'];
                             c['claim_txid'] = txid;
                         }
+                        success_callback(response);
                     },
                     error: function ( response ) {
-                        bootbox.alert('Sending transaction failed.');
+                        failure_callback(response);
                         //console.log(response);
                     },
                     dataType: data_type, 
@@ -541,12 +536,27 @@
             function(data) { 
                 //console.log('ok!');
                 //console.log(data);
-                $('#reality-key-id').val(data['id']);
-                $('#yes-pub-key').val(data['yes_pubkey']);
-                $('#no-pub-key').val(data['no_pubkey']);
+                $('#reality-key-id').val(realitykeys_utils.format_fact_id(data['id']));
+                $('#yes-pub-key').val(bitcoin_utils.format_pubkey(data['yes_pubkey']));
+                $('#no-pub-key').val(bitcoin_utils.format_pubkey(data['no_pubkey']));
+                var is_user_yes = ($('#your-pub-key').val() == data['yes_user_pubkey']); 
+                var is_user_no = ($('#your-pub-key').val() == data['no_user_pubkey']); 
+                var won_or_lost_class;
+                if (data['winner'] != null) {
+                    var is_user_winner = (is_user_no && data['winner'] == 'No') || (is_user_yes && data['winner'] == 'Yes');
+                    won_or_lost_class = is_user_winner ? 'you-won' : 'you-lost';
+                    $('body').addClass('winner-'+data['winner']);
+                    $('body').addClass(won_or_lost_class);
+                } else {
+                    $('body').addClass('winner-unknown');
+                }
                 if (data['winner_privkey'] != null) {
-                    $('#winner-privkey').val(data['winner_privkey']);
+                    $('#winner-privkey').val(bitcoin_utils.format_privkey(data['winner_privkey']));
                     $('body').addClass('settled');
+                    $('body').addClass(won_or_lost_class);
+                } else {
+                    $('#winner-privkey').val('');
+                    $('body').removeClass('settled');
                 }
                 update_key_form();
             },
@@ -720,6 +730,7 @@
             if (addr != $('#funding-address').val(addr)) {
                 // clea rthe funding address until we've made sure to sture the key data
                 $('#funding-address').val(''); 
+                //$('body').removeClass('claimed').removeClass('settled').removeClass('you-won').removeClass('you-lost');
             }
             if (addr != '') {
                 save_contract(
@@ -980,9 +991,6 @@
         var url_info = unspent_url_info(addr, network);;
         var url = url_info['url'];
         var response_format = url_info['response_format'];
-
-        //console.log("fetching unspent:");
-        $('body').addClass('fetching-balance-for-claim');
             
         $.ajax({
             url: url, 
@@ -1061,7 +1069,20 @@
             }).done( function(response) {
                 var data = bitcoin_utils.format_unspent_response(response, response_format, addr);
                 //console.log("compare keys and addr", keys, addr);
-                execute_claim(withdraw_to_addr, keys, data['unspent_outputs'], $('#your-private-key').val(), claim_frm.find('.winner-privkey').val(), network);
+                execute_claim(
+                    withdraw_to_addr, 
+                    keys, 
+                    data['unspent_outputs'], 
+                    $('#your-private-key').val(), 
+                    claim_frm.find('.winner-privkey').val(), 
+                    network, 
+                    function(data) {
+                        $('body').addClass('claimed');
+                    }, 
+                    function(data) {
+                        bootbox.alert('Sending transaction failed.');
+                    }
+                    );
             }).fail( function(data) {
                 //console.log("could not fetch");
                 //console.log(data.responseText);

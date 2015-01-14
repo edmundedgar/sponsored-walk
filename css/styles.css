@@ -217,3 +217,6 @@ body.hide-advanced .advanced { display: none; }
 body:not(.hide-advanced) .basic { display: none; }
 
 input.pubkey { }
+
+body.hide-advanced:not(.settled) #claim-form { display:none }
+body:not(.claimed) .claimed-only { display:none }

@@ -177,8 +177,8 @@
 <form id="address-check-form">
     <h3>Pay</h3>
     Address <input id="funding-address" class="funding-address" type="text" size="38" /> 
-    <input id="check-address" type="submit" class="btn btn-primary" value="Check address" />
-    <div>You've paid <span id="address-balance"></span> BTC so far.</div>
+    <input id="check-address" type="submit" class="btn btn-primary" value="Recheck address" />
+    <div>You have <span id="address-balance"></span> BTC at this address.</div>
 </form>
 </div>
 
@@ -191,6 +191,9 @@
     </div>
     Address <input size="38" id="withdraw-to-address" class="withdraw-to-address" type="text" /> 
     <input id="claim-from-address" class="btn btn-primary claim-from-address" value="Claim funds" />
+    <div class="claimed-only">
+    You have claimed your funds. It may take an hour or two for the transaction to confirm.
+    </div>
 </form>
 </div>
 
