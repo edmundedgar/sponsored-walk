@@ -72,7 +72,7 @@ exports.tx_for_claim_execution = function(to_addr, priv1, priv2, tx, c, network)
     //console.log("create builder");
     var b = new bitcoin.TransactionBuilder();
     //console.log("addi input");
-    b.addInput(utxos2[0]['txid'], 0);
+    b.addInput(utxos2[0]['txid'], utxos2[0]['vout']);
     //console.log("addi output");
     b.addOutput(to_addr, (amount-fee));
 
