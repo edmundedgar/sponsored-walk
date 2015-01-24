@@ -4,7 +4,7 @@
     var BIP39 = require('bip39');
 
     var oracle_api_base = settings.oracle_base + '/api/v1';
-    var oracle_view_base = settings.oracle_base + '/runkeeper/';
+    var oracle_view_base = settings.oracle_base + '/' + settings.realitykeys_api + '/';
     var oracle_param_string = '?accept_terms_of_service=current';
 
     var bitcoin_utils = require('./bitcoin_utils');
@@ -320,7 +320,6 @@
                 continue;
             }
             */
-            //console.log(txHex);
 
             // For now our spending transaction is non-standard, so we have to send to eligius.
             // Hopefully this will be fixed in bitcoin core fairly soon, and we can use same the blockr code for testnet.
@@ -455,7 +454,7 @@
 
     function populate_reality_key_and_append_to_display(c) {
 
-        var url = oracle_api_base + '/runkeeper/'+c['id']+'/'+oracle_param_string
+        var url = oracle_api_base + '/' + settings.realitykeys_api + '/' + c['id'] + '/'+oracle_param_string
         $.ajax({
             url: url, 
             type: 'GET',
@@ -478,7 +477,7 @@
 
         $('body').addClass('registering-fact');
         params['use_existing'] = 1; // Always use the same keys if there are any matching these conditions
-        var url = oracle_api_base + '/runkeeper/new';
+        var url = oracle_api_base + '/' + settings.realitykeys_api + '/new';
         var wins_on = 'Yes';
 
         var response;
@@ -488,7 +487,7 @@
 
         var request_type = 'POST';
         if (override_with_fact_id > 0) {
-            url = oracle_api_base + '/runkeeper/'+override_with_fact_id+'/'+oracle_param_string
+            url = oracle_api_base + '/'+settings.realitykeys_api + '/' + override_with_fact_id + '/' + oracle_param_string
             request_type = 'GET';
             params = null;
         } 
@@ -522,20 +521,18 @@
 
     function handle_submit_create_reality_key_form(frm) {
         var params = {
-            'user_id': frm.find('[name=user_id]').val(),
-            'activity': $('[name=activity]').val(),
-            'measurement': $('[name=measurement]').val(),
-            'goal': $('[name=goal]').val(),
-            'settlement_date': $('[name=settlement_date]').val(),
-            'comparison': 'ge',
-            'objection_period_secs': $('[name=objection_period_secs]').val(),
             'accept_terms_of_service': 'current',
         };
+	frm.find('[data-realitykeys-api-param]').each( function() {
+            params[$(this).attr('data-realitykeys-api-param')] = $(this).val();
+	});
+
         register_contract(
             params, 
             function(data) { 
                 //console.log('ok!');
                 //console.log(data);
+                $('#title').text(data['title']);
                 $('#reality-key-id').val(realitykeys_utils.format_fact_id(data['id']));
                 $('#yes-pub-key').val(bitcoin_utils.format_pubkey(data['yes_pubkey']));
                 $('#no-pub-key').val(bitcoin_utils.format_pubkey(data['no_pubkey']));
@@ -717,7 +714,6 @@
             $('#funding-address').val('');
             return false;
         }
-        console.log(c);
         //console.log('c:',c);
         var addr = realitykeys_utils.p2sh_address(c);
         c['address'] = addr; // used by store
@@ -1067,6 +1063,7 @@
                 type: 'GET',
                 dataType: 'json'
             }).done( function(response) {
+console.log('execute claim for network ',':'+network+':');
                 var data = bitcoin_utils.format_unspent_response(response, response_format, addr);
                 //console.log("compare keys and addr", keys, addr);
                 execute_claim(
