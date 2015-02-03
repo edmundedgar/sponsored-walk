@@ -18,9 +18,11 @@ function getParameterByName(name) {
 $(function() {
     var site_resource_id = parseInt(getParameterByName('id'));
     if (!site_resource_id) {
+	alert('Error: missing site id');
         // If there's no site_resource_id we'll need the user to fill in the form.
         // This makes the form a standard feature which should never be hidden, not an advanced one.
         $('#create-reality-key-form').closest('div').removeClass('advanced');
+        main.initialize_page();
         return;
     }
 
@@ -35,10 +37,7 @@ $(function() {
         // NB Only the title will exist on the claim page. 
         // That's OK, jquery doesn't mind applying things to zero elements.
         $('#title').text(data['title']); 
-        $('#user_id').val(data['user_id']); 
-        $('#activity').val(data['activity']); 
-        $('#measurement').val(data['measurement']); 
-        $('#goal').val(data['goal']); 
+        $('#bounty_id').val(data['bounty_id']); 
         $('#settlement_date').val(data['settlement_date']); 
         //$('#setting_default_days_in_future').val(data['setting_default_days_in_future']);
         $('#counterparty-pub-key').val(data['sponsored_pubkey']);

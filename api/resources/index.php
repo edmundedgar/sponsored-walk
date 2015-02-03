@@ -10,6 +10,12 @@ See js/src/populate.js for more information.
 // Pretend this is your database
 // The keys are your IDs.
 $db = array(
+    234 => array(
+        'sponsored_pubkey' => '02f3a32b55520c115cc61860066c8280d0adbb471abe5b89e0b5e864948a34961e',
+	'bounty_id' => 234,
+        'settlement_date' => '2015-01-24', 
+        'objection_period_secs' => 1 * 60 * 60, 
+    ),
     98765 => array(
         // If the site gets all the "yes" funds, this will belong to the site.
         // If you allow different people to sign up and get funded for things on "yes", use their key
