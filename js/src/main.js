@@ -297,7 +297,7 @@
         }
     }
 
-    function execute_claim(to_addr, c, txes, user_privkey, winner_privkey, network) {
+    function execute_claim(to_addr, c, txes, user_privkey, winner_privkey, network, success_callback, failure_callback) {
 
         var i;
 
@@ -1063,7 +1063,6 @@
                 type: 'GET',
                 dataType: 'json'
             }).done( function(response) {
-console.log('execute claim for network ',':'+network+':');
                 var data = bitcoin_utils.format_unspent_response(response, response_format, addr);
                 //console.log("compare keys and addr", keys, addr);
                 execute_claim(
@@ -1075,9 +1074,10 @@ console.log('execute claim for network ',':'+network+':');
                     network, 
                     function(data) {
                         $('body').addClass('claimed');
+						alert('Claim transaction sent. Please be patient, it may take a few hours to confirm.');
                     }, 
                     function(data) {
-                        bootbox.alert('Sending transaction failed.');
+                        alert('Sending transaction failed.');
                     }
                     );
             }).fail( function(data) {
