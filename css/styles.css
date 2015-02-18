@@ -220,3 +220,8 @@ input.pubkey { }
 
 body.hide-advanced:not(.settled) #claim-form { display:none }
 body:not(.claimed) .claimed-only { display:none }
+
+div .error-display {
+	display: none;
+	border: 1px solid red;
+}

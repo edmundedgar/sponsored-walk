@@ -41,7 +41,12 @@
 
 <div class="container-fluid goal-div needs-connect" id="div1">
 
-<h2 id="title"></h2>
+
+<h2 id="title">&nbsp;</h2>
+
+<div class="error-display">
+</div>
+
 
 <div>
     <form id="user-key-form" class="hide-mnemonic">
@@ -59,12 +64,14 @@
         -->
         <br />
         <br />
-        Store this in your browser? 
+        You can store this in your browser for next time, but make sure you have a copy.
         <br />
 
-        <input style="" class="btn btn-primary" id="remember-mnemonic-button" value="Yes, store it" />
+        <input style="" class="btn btn-primary" id="remember-mnemonic-button" value="Store my secret" />
         <input style="" class="btn btn-primary" id="forget-mnemonic-button" value="Stop storing it" />
-        <input style="" class="btn btn-primary" id="confirm-mnemonic-button" value="No need, I've got it." />
+		<br />
+		<br />
+        <input style="" class="btn btn-primary" id="confirm-mnemonic-button" value="OK, I've got it." />
         <div class="advanced">
         <br />
         <br />
@@ -172,7 +179,7 @@
     <h3>Pay</h3>
     Address <input id="funding-address" class="funding-address" type="text" size="38" /> 
     <input id="check-address" type="submit" class="btn btn-primary" value="Recheck address" />
-    <div>You have <span id="address-balance"></span> BTC at this address.</div>
+    <div>You have <span id="address-balance"></span> BTC confirmed at this address.</div>
 </form>
 </div>
 

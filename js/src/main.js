@@ -113,6 +113,7 @@
             $('#your-pub-key').val('');
             $('.public-key-display').hide();
             $('#confirm-mnemonic-button').attr('disabled', 'disabled');
+			report_error('Invalid mnemonic.');
         } else {
             handle_user_key_update(k);
             $('#confirm-mnemonic-button').removeAttr('disabled');
@@ -128,11 +129,13 @@
         var words = mnemonic_text.split(' ');
         if (words.length != 12) {
             $('body').removeClass('mnemonic-created-and-confirmed');
+			report_error('Invalid mnemonic.');
             return false;
         }
 
         if (!BIP39.validateMnemonic(mnemonic_text)) {
             $('body').removeClass('mnemonic-created-and-confirmed');
+			report_error('Invalid mnemonic.');
             return false;
         }
 
@@ -523,9 +526,9 @@
         var params = {
             'accept_terms_of_service': 'current',
         };
-	frm.find('[data-realitykeys-api-param]').each( function() {
+	    frm.find('[data-realitykeys-api-param]').each( function() {
             params[$(this).attr('data-realitykeys-api-param')] = $(this).val();
-	});
+	    });
 
         register_contract(
             params, 
@@ -558,7 +561,7 @@
                 update_key_form();
             },
             function(data) {
-                bootbox.alert('Sorry, could not register the fact with Reality Keys.');
+                report_error('Sorry, could not register the fact with Reality Keys. It may be temporarily unavilable. Please try again later');
             }
         
         );
@@ -683,6 +686,7 @@
         // Always run the change handler on init.
         // This will toggle the body class to show if we're ready to do other stuff
         handle_mnemonic_change($('#mnemonic'));
+		return true;
 
     }
 
@@ -712,6 +716,7 @@
         };
         if (!key_check(c)) {
             $('#funding-address').val('');
+			$('.address-check-form').removeClass('address-populated');
             return false;
         }
         //console.log('c:',c);
@@ -726,6 +731,7 @@
             if (addr != $('#funding-address').val(addr)) {
                 // clea rthe funding address until we've made sure to sture the key data
                 $('#funding-address').val(''); 
+                $('.address-check-form').removeClass('address-populated');
                 //$('body').removeClass('claimed').removeClass('settled').removeClass('you-won').removeClass('you-lost');
             }
             if (addr != '') {
@@ -734,10 +740,12 @@
                     false, 
                     function(data) {
                         $('#funding-address').val(addr);
+                        $('.address-check-form').addClass('address-populated');
                         handle_funding_address_update(addr);
                     },
                     function(data) {
                         $('#funding-address').val(''); 
+                        $('.address-check-form').removeClass('address-populated');
                         //console.log('storing contract failed', data);
                     }
                 );
@@ -1105,9 +1113,16 @@
 
     }
 
+	function report_error(txt) {
+		$('.error-display').text(txt).show();
+		$('.error-display').delay(30000).fadeOut('slow');
+	}
+
     exports.initialize_page = function() {
 
-        setup_user_key_form($('#user-key-form'));
+        if (!setup_user_key_form($('#user-key-form'))) {
+			report_error('Error setting up user keys');
+		}
         setup_advanced_toggle();
 
         if ($('body').hasClass('claim-page')) {
