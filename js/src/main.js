@@ -152,152 +152,9 @@
 
         //bootbox.alert('Please pay:<br />'+c['address']); 
 
-        var url = sharing_url(c, false);
-        $('#section3').attr('name', url);
-
         populate_contract_and_append_to_display(c);
         display_single_contract(c);
 
-    }
-
-    function import_contracts(import_url) {
-        var pubkey = $('#public-key').text();
-        //var url = $('#import-contract-url').val() + pubkey;
-        var url = import_url + pubkey;
-        $.ajax({
-            url: url, 
-            type: 'GET',
-            dataType: 'text', 
-            success: function(data) {
-                var lines = data.split("\n");
-                for (i=0; i<lines.length; i++) {
-                    var l = lines[i];
-                    if (l == '') {
-                        continue;
-                    }
-                    var c = hash_to_contract('#' + l);
-                    import_contract_if_required(c);
-                }
-            },
-            error: function(data) {
-                //console.log("got error from load");
-                //console.log(data);
-            }
-        });
-        return false;
-    }
-
-    function hash_to_contract(import_hash) {
-
-        if (!/^#.*-.*-\d+-t?btc$/.test(import_hash)) {
-            ////console.log('import hash wrongly formatted, not even going to try to parse it');
-            return null;
-        }
-
-        var url_parts = import_hash.split('#');
-
-        var url_part = url_parts[1];
-        var contract_data = url_part.split('-');
-
-        // not an import
-        if (contract_data.length != 4) {
-            return false;
-        }
-
-        var yes_user_pubkey =  bitcoin_utils.format_pubkey(contract_data[0]);
-        var no_user_pubkey = bitcoin_utils.format_pubkey(contract_data[1]);
-        var fact_id = realitykeys_utils.format_fact_id(contract_data[2]);
-        var network = bitcoin_utils.format_network(contract_data[3]);
-
-        if ( yes_user_pubkey == null || no_user_pubkey == null || fact_id == null) {
-            return null;
-        }
-
-        var c = {};
-        c['yes_user_pubkey'] = yes_user_pubkey;
-        c['no_user_pubkey'] = no_user_pubkey;
-        c['id'] = fact_id;
-        c['network'] = network;
-
-        return c;
-
-    }
-
-    function view_contract_if_in_hash(import_hash) {
-
-//console.log("import import_hash "+import_hash);
-        var c = hash_to_contract(import_hash);
-        if (c == null) {
-            return false;
-        }
-
-        var url = sharing_url(c, false);
-        $('#section3').attr('name', url);
-
-        // Should already be this, but changing it now seems to force the page to jump properly
-        document.location.hash = '#'+url;
-
-        display_single_contract(c);
-        $(document).scrollTop( $("#section3").offset().top );
-
-        return false;
-
-    }
-
-    // TODO: This ends up duplicating a lot with display_single_contract
-    function import_contract_if_required(c) {
-
-        var wins_on = wins_on_for_stored_keys(c);
-        if (wins_on == 'None') {
-            return false;
-        }
-
-        // Start populated with the data we have, fetch the rest
-        data = c;
-
-        // Make sure we have at least one of the keys
-        url = oracle_api_base + '/fact/' + c['id'] + '/' + oracle_param_string;
-        //console.log("fetching reality keys data:");
-        //console.log(url);
-        $.ajax({
-            url: url, 
-            type: 'GET',
-            dataType: 'json', 
-            success: function(data) {
-                data['wins_on'] = wins_on;
-                data['charity_display'] = charity_display_for_pubkey(c['no_user_pubkey']);
-                data['yes_user_pubkey'] = c['yes_user_pubkey'];
-                data['no_user_pubkey'] = c['no_user_pubkey'];
-                data['is_testnet'] = c['is_testnet'];
-                data['address'] = realitykeys_utils.p2sh_address(data);
-
-                if (storage.is_contract_stored(data['address'])) {
-                    return true;
-                }
-
-                save_contract(data);
-                reflect_contract_added(data);
-                $(document).scrollTop( $("#section3").offset().top );
-            },
-            error: function(data) {
-                //console.log("got error from fake");
-                //console.log(data);
-            }
-        });
-        return false;
-
-    }
-
-    // Return a nicely-formatted date, if the browser supports it
-    // Otherwise just return which you sent us, which should by eg 2014-08-16
-    function formatted_date(iso_date) {
-        try {
-            var dt = new Date(iso_date);
-            var formatted = dt.toLocaleString('en-US', {weekday: "long", year: "numeric", month: "long", day: "numeric"});
-            return formatted;
-        } catch (e) { 
-            return iso_date;
-        }
     }
 
     function execute_claim(to_addr, c, txes, user_privkey, winner_privkey, network, success_callback, failure_callback) {
@@ -366,18 +223,6 @@
                 });
             }
         }
-    }
-
-    function sharing_url(c, full) {
-        var store = c['yes_user_pubkey']+'-'+c['no_user_pubkey']+'-'+c['id']+'-'+c['network'];
-        var base = '';
-        if (full) {
-            base += document.URL;
-            base = base.replace(/\?.*$/, "");
-            base = document.URL.replace(/\#.*$/, "");
-            base += '#';
-        }
-        return base + store;
     }
 
     function append_contract_to_display(c) {
@@ -746,6 +591,7 @@
                     function(data) {
                         $('#funding-address').val(''); 
                         $('.address-check-form').removeClass('address-populated');
+						report_error('Unable to prepare the funding address - could not store keys.');
                         //console.log('storing contract failed', data);
                     }
                 );
